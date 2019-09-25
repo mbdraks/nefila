@@ -7,8 +7,8 @@ Nefila is an elegant and simple Fortinet Security Fabric library for Python.
 ```python
 Python 3.7.4 (default, Sep  7 2019, 18:27:02)
 >>> import nefila
->>> device = nefila.FortiGate()
->>> device.open('192.0.2.1')
+>>> device = nefila.FortiGate('192.0.2.1')
+>>> device.open()
 >>> device.status
 ```
 <!-- 
