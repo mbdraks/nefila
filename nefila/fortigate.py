@@ -1,9 +1,9 @@
 import requests
 from .utils import get_credentials
-from .system import dns_database
+
 
 class FortiGate(object):
-    def __init__(self):
+    def __init__(self, hostname):
         #: Use the same session for all requests
         self.session = requests.session()
 
@@ -14,14 +14,16 @@ class FortiGate(object):
         self.timeout = 10
 
         #: Device hostname
-        self.hostname = None
+        self.hostname = hostname
 
         #: Default username
         self.username = 'admin'
 
+        self.url_prefix = ''
 
-    def open(self, hostname, username='admin', password='', token=None,
-        verify=False):
+        self.system = System(self.session, self.timeout, self.hostname)
+
+    def open(self, username='admin', password='', token=None, verify=False):
 
         # credentials = get_credentials(hostname)
 
@@ -30,7 +32,7 @@ class FortiGate(object):
         #     password = credentials['password']
 
         # Update parameters
-        self.hostname = hostname
+        hostname = self.hostname
         self.username = username
         self.verify = verify
         self.url_prefix = f'https://{hostname}'
@@ -84,3 +86,63 @@ class FortiGate(object):
     def status(self):
         return self._get_status()
 
+
+class System(object):
+    def __init__(self, session, timeout, hostname):
+        self.session = session
+        self.timeout = timeout
+        self.hostname = hostname
+        self.dns_database = DnsDatabase(self.session, self.timeout, self.hostname, name=None)
+
+    def dns_database_test(self, action=None):
+        url = f'https://{self.hostname}/api/v2/cmdb/system/dns-database?action={action}'
+        response = self.session.get(url, timeout=self.timeout)
+        return response
+
+class DnsDatabase(object):
+    '''Add or check records on the DNS Database.
+
+    Usage:
+        device.system.dns_database.name = 'exampleZone'
+        device.system.dns_database.add(ip='192.2.0.1', hostname='example')
+        device.system.dns_database.get().json()
+    '''
+
+    def __init__(self, session, timeout, hostname, name):
+        self.session = session
+        self.timeout = timeout
+        self.hostname = hostname
+        self.name = name
+
+    def add(self, ip, hostname):
+        
+        # Obtain existing list
+        url = f'https://{self.hostname}/api/v2/cmdb/system/dns-database/{self.name}'
+        response = self.session.get(url=url, timeout=self.timeout)
+        dns_entry_list = response.json()['results'][0]['dns-entry']
+
+        # prepare the new entry
+        dns_entry_id = len(dns_entry_list) + 1
+        dns_entry = {
+                'id': dns_entry_id,
+                'ip': ip,
+                'hostname': hostname,
+        }
+
+        # prepare new dns table
+        dns_entry_list.append(dns_entry)
+        dns_entry = {'dns-entry': dns_entry_list}
+
+        # update zone
+        response = self.session.put(url, json=dns_entry)
+        
+        return response
+
+    def get(self):
+        
+        url = f'https://{self.hostname}/api/v2/cmdb/system/dns-database/{self.name}'
+        response = self.session.get(url=url, timeout=self.timeout)
+        return response
+
+# zone = device.system.dns_database(name='home')
+# zone.add(ip=ip, hostname=hostname)

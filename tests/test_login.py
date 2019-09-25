@@ -7,20 +7,20 @@ username = 'demo'
 password = 'demo'
 
 def test_login():
-    device = nefila.FortiGate()
-    device.open(hostname, username=username, password=password)
+    device = nefila.FortiGate(hostname)
+    device.open(username=username, password=password)
     device.close
     assert device.hostname == hostname
 
 def test_url_prefix():
-    device = nefila.FortiGate()
-    device.open(hostname, username=username, password=password)
+    device = nefila.FortiGate(hostname)
+    device.open(username=username, password=password)
     device.close
     assert device.url_prefix == f'https://{hostname}'
 
 def test_device_status():
-    device = nefila.FortiGate()
-    device.open(hostname, username=username, password=password)
+    device = nefila.FortiGate(hostname)
+    device.open(username=username, password=password)
     status = device.status
     device.close
 
