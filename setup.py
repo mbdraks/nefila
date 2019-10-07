@@ -4,7 +4,7 @@ setup(
     name="nefila", 
     packages=find_packages(),
     version = '0.0.1',
-    license='GPL-v3',
+    license='GPL-3',
     description = 'Nefila is an elegant and simple Fortinet Security Fabric library for Python.',
     author = 'Michel Barbosa',
     author_email = 'nothing@nodomain.com',
@@ -18,7 +18,7 @@ setup(
     'Development Status :: 3 - Alpha',
     'Intended Audience :: Developers',
     'Topic :: Software Development :: Build Tools',
-    'License :: OSI Approved :: GPL-v3 License',
+    'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
     'Programming Language :: Python :: 3.7',
     ],
 )
