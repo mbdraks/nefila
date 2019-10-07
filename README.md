@@ -15,13 +15,13 @@ Python 3.7.4 (default, Sep  7 2019, 18:27:02)
 ## Features
 
 - File-based authentication
+ -->
 
+## Requirements and Installation
 
-## Requirements
+Nefila requires Python 3.7. You can install `nefila` using pip:
 
-Nefila requires Python 3.6 You can install `nefila` using pip:
-
-    pip install nefila -->
+    pip install nefila
 
 
 <!-- ## Credentials
