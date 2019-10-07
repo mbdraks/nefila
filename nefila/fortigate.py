@@ -1,6 +1,6 @@
 import requests
 from .utils import get_credentials
-
+import json
 
 class FortiGate(object):
     def __init__(self, hostname):
@@ -15,55 +15,62 @@ class FortiGate(object):
 
         #: Device hostname
         self.hostname = hostname
+        self.base_url = f'https://{self.hostname}/api/v2'
 
-        #: Default username
-        self.username = 'admin'
+        # Subsystems init
+        self.system = System(self.session, self.timeout, self.base_url)
 
-        self.url_prefix = ''
 
-        self.system = System(self.session, self.timeout, self.hostname)
+    def open(self, username=None, password=None, token=None, profile=None):
 
-    def open(self, username='admin', password='', token=None, verify=False):
+        # self.profile = profile
 
-        # credentials = get_credentials(hostname)
-
-        # if credentials:
-        #     username = credentials['username']
-        #     password = credentials['password']
+        # If credentials are not supplied, check file
+        if not username:
+            credentials = get_credentials(profile)
+            username = credentials['username']
+            password = credentials['password']
+            token = credentials['token']
 
         # Update parameters
-        hostname = self.hostname
         self.username = username
-        self.verify = verify
-        self.url_prefix = f'https://{hostname}'
-        url_login = f'{self.url_prefix}/logincheck'
+        url_login = f'https://{self.hostname}/logincheck'
 
-        response = self.session.post(url=url_login,
-                                    data=f'username={username}&secretkey={password}',
-                                    verify = verify,
-                                    timeout = self.timeout,
-        )
+        if not token:
+            self.session.post(url=url_login,
+                            data=f'username={username}&secretkey={password}',
+                            verify = self.verify,
+                            timeout = self.timeout,
+            )
 
-        for cookie in self.session.cookies:
-            if cookie.name == 'ccsrftoken':
-                csrftoken = cookie.value[1:-1] # token stored as a list
-                self.session.headers.update({'X-CSRFTOKEN': csrftoken})
+            for cookie in self.session.cookies:
+                if cookie.name == 'ccsrftoken':
+                    csrftoken = cookie.value[1:-1]
+                    self.session.headers.update({'X-CSRFTOKEN': csrftoken})
 
-        return response.status_code
+        else:
+            self.session.headers.update({'Authorization': f'Bearer {token}'})
+            self.token = True
+        
+        response = self.license_status()
+        
+        # self.serial = response.json()['serial']
+        
+        # version = response.json()['version']
+        # build = str(response.json()['build'])
+        # self.version = f'{version},build{build}'
+
+        return response
 
 
-    def _close(self):
-        url_logout = f'{self.url_prefix}/logout'
+    def close(self):
+        url_logout = f'https://{self.hostname}/logout'
         response = self.session.post(url_logout, timeout=self.timeout)
         return response.status_code
 
-    @property
-    def close(self):
-        return self._close()
-
 
     def _get_status(self):
-        url = f'{self.url_prefix}/api/v2/monitor/license/status'
+        url = f'{self.base_url}/monitor/license/status'
         response = self.session.get(url, timeout=self.timeout)
         if response.status_code == 200:
             status = {}
@@ -71,7 +78,7 @@ class FortiGate(object):
             status['serial'] = response.json()['serial']
             status['forticare'] = response.json()['results']['forticare']['status']
 
-        url = f'{self.url_prefix}/api/v2/monitor/web-ui/state'
+        url = f'{self.base_url}/monitor/web-ui/state'
         response = self.session.get(url, timeout=self.timeout)
         if response.status_code == 200:
             model_name = response.json()['results']['model_name']
@@ -87,37 +94,73 @@ class FortiGate(object):
         return self._get_status()
 
 
-class System(object):
-    def __init__(self, session, timeout, hostname):
-        self.session = session
-        self.timeout = timeout
-        self.hostname = hostname
-        self.dns_database = DnsDatabase(self.session, self.timeout, self.hostname, name=None)
-
-    def dns_database_test(self, action=None):
-        url = f'https://{self.hostname}/api/v2/cmdb/system/dns-database?action={action}'
+    def basic_status(self):
+        '''Retrieve basic system status.'''
+        url = f'{self.base_url}/monitor/system/status'
         response = self.session.get(url, timeout=self.timeout)
         return response
+
+
+    def license_status(self):
+        '''Get current license & registration status.'''
+        url = f'{self.base_url}/monitor/license/status'
+        response = self.session.get(url, verify = self.verify, timeout=self.timeout)
+
+        if response.status_code == 200:
+            self.version = response.json()['version']
+            self.serial = response.json()['serial']
+            self.forticare = response.json()['results']['forticare']['status']
+
+        return response
+
+
+class System(object):
+    def __init__(self, session, timeout, base_url):
+        self.session = session
+        self.timeout = timeout
+        self.base_url = base_url
+        self.dns_database = DnsDatabase(self.session, self.timeout, self.base_url, name=None)
+
 
 class DnsDatabase(object):
     '''Add or check records on the DNS Database.
 
     Usage:
+        device.system.dns_database.list()
         device.system.dns_database.name = 'exampleZone'
+        device.system.dns_database.create()
         device.system.dns_database.add(ip='192.2.0.1', hostname='example')
         device.system.dns_database.get().json()
+        device.system.dns_database.delete()
     '''
 
-    def __init__(self, session, timeout, hostname, name):
+    def __init__(self, session, timeout, base_url, name):
         self.session = session
         self.timeout = timeout
-        self.hostname = hostname
+        self.base_url = base_url
         self.name = name
 
+
+    def list(self):
+        '''List all DNS zones'''
+        url = f'{self.base_url}/cmdb/system/dns-database'
+        response = self.session.get(url=url, timeout=self.timeout)
+        return response
+
+
+    def create(self):
+        '''Create a new DNS Zone'''
+        url = f'{self.base_url}/cmdb/system/dns-database'
+        data = {'name': self.name, 'domain': self.name}
+        response = self.session.post(url=url, json=data)
+        return response
+
     def add(self, ip, hostname):
-        
+        '''Add a new entry on a specific existing DNS Zone, preserving 
+        existing entries.
+        '''
         # Obtain existing list
-        url = f'https://{self.hostname}/api/v2/cmdb/system/dns-database/{self.name}'
+        url = f'{self.base_url}/cmdb/system/dns-database/{self.name}'
         response = self.session.get(url=url, timeout=self.timeout)
         dns_entry_list = response.json()['results'][0]['dns-entry']
 
@@ -138,11 +181,16 @@ class DnsDatabase(object):
         
         return response
 
+
     def get(self):
-        
-        url = f'https://{self.hostname}/api/v2/cmdb/system/dns-database/{self.name}'
+        '''Get all entries of a specific DNS Zone'''
+        url = f'{self.base_url}/cmdb/system/dns-database/{self.name}'
         response = self.session.get(url=url, timeout=self.timeout)
         return response
 
-# zone = device.system.dns_database(name='home')
-# zone.add(ip=ip, hostname=hostname)
+
+    def delete(self):
+        '''Delete DNS Zone'''
+        url = f'{self.base_url}/cmdb/system/dns-database/{self.name}'
+        response = self.session.delete(url=url, timeout=self.timeout)
+        return response
