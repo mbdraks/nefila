@@ -4,31 +4,6 @@ import pytest
 import nefila
 import nefila.utils
 
-# import betamax
-
-# from betamax_serializers import pretty_json
-# betamax.Betamax.register_serializer(pretty_json.PrettyJSONSerializer)
-
-# with betamax.Betamax.configure() as config:
-#     config.cassette_library_dir = 'tests/cassetes/'
-#     config.default_cassette_options['serialize_with'] = 'prettyjson'
-#     config.define_cassette_placeholder('<USERNAME>', username)
-#     config.define_cassette_placeholder('<PASSWORD>', password)
-
-
-# def test_login():
-#     device = nefila.FortiGate(hostname)
-#     # prevent gzip, create readable betamax cassetes
-#     device.session.headers.update({'Accept-Encoding': 'identity'})    
-#     recorder = betamax.Betamax(device.session)
-
-#     with recorder.use_cassette('our-first-recorded-session'):
-#         device.open(username=username, password=password)
-#         device.status
-#         device.close
-    
-#     assert device.hostname == hostname
-
 creds_filename = './var/test_login_credentials'
 config_filename = './var/test_login_config'
 TEST_PROFILE = 'TEST_LOGIN'
@@ -42,7 +17,7 @@ hostname = device_config['hostname']
 def device():
     '''Device setup and teardown'''
     device = nefila.FortiGate(hostname)
-    device.open(**credentials)    
+    device.open(**credentials)
     yield device
     device.close()
 
