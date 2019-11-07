@@ -21,18 +21,18 @@ def test_set_credentials_custom():
     }
     nefila.utils.set_credentials(**parameters)
 
-def test_get_credential_default_file():
-    nefila.utils.get_credentials(filename=creds_filename)
+# def test_get_credential_default_file():
+#     nefila.utils.get_credentials(filename=creds_filename)
 
 def test_get_credential_no_file():
     nefila.utils.get_credentials(filename='')
 
-def test_get_credential_custom_profile():
-    parameters = {
-        'filename': creds_filename,
-        'profile': TEST_PROFILE,
-    }
-    nefila.utils.get_credentials(**parameters)
+# def test_get_credential_custom_profile():
+#     parameters = {
+#         'filename': creds_filename,
+#         'profile': TEST_PROFILE,
+#     }
+#     nefila.utils.get_credentials(**parameters)
 
 def test_set_config_default():
     nefila.utils.set_config(filename=config_filename)

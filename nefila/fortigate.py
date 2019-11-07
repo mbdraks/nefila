@@ -1,6 +1,8 @@
 import requests
 from .utils import get_credentials
 import json
+import time
+import datetime
 
 class FortiGate(object):
     def __init__(self, hostname):
@@ -9,6 +11,7 @@ class FortiGate(object):
 
         #: SSL Verification default.
         self.verify = False
+        self.session.verify = False
 
         #: How long to wait for the server to send data before giving up
         self.timeout = 10
@@ -23,11 +26,9 @@ class FortiGate(object):
 
     def open(self, username=None, password=None, token=None, profile=None):
 
-        # self.profile = profile
-
         # If credentials are not supplied, check file
-        if not username:
-            credentials = get_credentials(profile)
+        if not (username or token or profile):
+            credentials = get_credentials()
             username = credentials['username']
             password = credentials['password']
             token = credentials['token']
@@ -70,6 +71,11 @@ class FortiGate(object):
 
 
     def _get_status(self):
+        '''Obtain general status
+        
+        Uptime in seconds
+
+        '''
         url = f'{self.base_url}/monitor/license/status'
         response = self.session.get(url, timeout=self.timeout)
         if response.status_code == 200:
@@ -83,8 +89,16 @@ class FortiGate(object):
         if response.status_code == 200:
             model_name = response.json()['results']['model_name']
             model_number = response.json()['results']['model_number']
+
+            ticks = response.json()['results']['utc_last_reboot'] 
+            ticks_to_seconds = ticks/1000
+            uptime = time.time() - ticks_to_seconds
+            uptime = datetime.timedelta(seconds=uptime)
+
             status['hostname'] = response.json()['results']['hostname']
             status['model'] = f'{model_name}-{model_number}'
+            status['uptime'] = uptime.seconds
+
             return status
         else:
             return response.status_code
@@ -119,7 +133,144 @@ class System(object):
         self.session = session
         self.timeout = timeout
         self.base_url = base_url
+
         self.dns_database = DnsDatabase(self.session, self.timeout, self.base_url, name=None)
+        self.firmware = Firmware(self.session, self.timeout, self.base_url)
+        self.api_user = ApiUser(self.session, self.timeout, self.base_url, name='nefila-api-admin')
+
+
+class ApiUser(object):
+    '''List and configure API users.
+
+    Default API user is nefila-api-admin using super_admin profile and 
+    trusted hosts 192.168.0.0/16.
+
+    Usage:
+        device.system.api_user.list()
+        device.system.api_user.create()
+        device.system.api_user.token
+        device.system.api_user.get()
+        device.system.api_user.delete()
+
+        device.system.api_user.name = 'custom-api-admin'
+        device.system.api_user.create(accprofile='prof_admin',
+                            ipv4_trusthost='192.0.2.0/24')
+    '''
+
+    def __init__(self, session, timeout, base_url, name):
+        self.session = session
+        self.timeout = timeout
+        self.base_url = base_url
+        self.name = name
+
+    def list(self):
+        '''List all API users'''
+        url = f'{self.base_url}/cmdb/system/api-user'
+        response = self.session.get(url=url, timeout=self.timeout)
+        return response
+
+    def create(self, accprofile='super_admin', ipv4_trusthost='192.168.0.0/16'):
+        '''Create a new API user and generate an access key'''
+        url = f'{self.base_url}/cmdb/system/api-user'
+        name = self.name
+        token = None
+
+        data = {
+            'name': name,
+            'accprofile': accprofile,
+            'trusthost':[{
+                'id':0,
+                'type':'ipv4-trusthost',
+                'ipv4-trusthost': ipv4_trusthost,
+                }
+            ]
+        }
+
+        response = self.session.post(url=url, json=data)
+
+        if response.status_code == 200:
+            data = {'api-user': self.name}
+            url = f'{self.base_url}/monitor/system/api-user/generate-key'
+            response = self.session.post(url=url, json=data)
+            token = response.json()['results']['access_token']
+            self.token = token
+
+        return response
+
+    def get(self):
+        '''Get details of a specific API user'''
+        url = f'{self.base_url}/cmdb/system/api-user/{self.name}'
+        response = self.session.get(url=url, timeout=self.timeout)
+        return response
+
+
+    def delete(self):
+        '''Delete API user'''
+        url = f'{self.base_url}/cmdb/system/api-user/{self.name}'
+        response = self.session.delete(url=url, timeout=self.timeout)
+        return response
+
+
+
+class Firmware(object):
+    '''List and upgrade device firmware.
+
+    Usage:
+        device.system.firmware.list()
+        device.system.firmware.upgrade()
+        device.system.firmware.upgrade('v6.2.0')
+    '''
+
+    def __init__(self, session, timeout, base_url):
+        self.session = session
+        self.timeout = timeout
+        self.base_url = base_url
+
+    def list(self):
+        '''Retrieve a list of firmware images available to use for 
+        upgrade on this device from FortiGuard'''
+        url = f'{self.base_url}/monitor/system/firmware'
+        response = self.session.get(url=url, timeout=self.timeout)
+        return response
+
+    def upgrade(self, version=None, timeout=300):
+        '''Upgrade firmware image on this device
+        Default timeout is longer to allow firmware download from FDN'''
+        url = f'{self.base_url}/monitor/system/firmware/upgrade'
+        
+
+        firmware_list = self.list().json()['results']['available']
+
+        if not version:
+            version_id = firmware_list[0]['id']
+
+        # If version is set, find corresponding version_id
+        # If version equals None then update to the latest available
+        if version:
+            for firmware in firmware_list:
+                if firmware['version'] == version:
+                    version_id = firmware['id']
+        else:
+            version_id = firmware_list[0]['id']
+
+        data = {'source': 'fortiguard', 'filename': version_id}
+        response = self.session.post(url=url, json=data, timeout=timeout)
+
+        # Should return this if success
+        '''
+        {'http_method': 'POST',
+        'results': {'status': 'success'},
+        'vdom': 'root',
+        'path': 'system',
+        'name': 'firmware',
+        'action': 'upgrade',
+        'status': 'success',
+        'serial': 'FGVULVTM19000152',
+        'version': 'v6.2.0',
+        'build': 799}
+        '''
+
+        return response
 
 
 class DnsDatabase(object):

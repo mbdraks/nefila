@@ -28,7 +28,7 @@ def set_credentials(profile=profile,
 
     os.makedirs(nefila_dir, exist_ok=True)
 
-    with open(filename, 'w') as configfile:
+    with open(filename, 'a') as configfile:
         config.write(configfile)
     return 'Credentials file set'
 
@@ -37,21 +37,27 @@ def get_credentials(profile=profile, filename=creds_filename):
     '''Obtain credentials from file'''
     # Assign default credentials if file does not exist
     config = configparser.ConfigParser()
-    if not os.path.exists(filename):
-        config[profile] = {
+    credentials = {}
+    if os.path.exists(filename):
+        config.read(filename)
+        # If file exist, check if profile exist
+        if profile in config:
+            credentials = {
+                'username': config[profile].get('username', DEFAULT_USERNAME),
+                'password': config[profile].get('password', DEFAULT_PASSWORD),
+                'token': config[profile].get('token', DEFAULT_TOKEN),
+            }
+        else:
+            credentials = {
+                'username': DEFAULT_USERNAME, 
+                'password': DEFAULT_PASSWORD, 
+                'token': DEFAULT_TOKEN,
+            }
+    else:
+        credentials = {
             'username': DEFAULT_USERNAME, 
             'password': DEFAULT_PASSWORD, 
             'token': DEFAULT_TOKEN,
-        }
-    else:
-        config.read(filename)
-        
-    # If file exist, check if profile exist
-    if profile in config:
-        credentials = {
-            'username': config[profile].get('username', DEFAULT_USERNAME),
-            'password': config[profile].get('password', DEFAULT_PASSWORD),
-            'token': config[profile].get('token', DEFAULT_TOKEN),
         }
 
     return credentials
