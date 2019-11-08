@@ -69,6 +69,32 @@ def test_system_firmware_upgrade_specific(device):
     # device.system.firmware.upgrade('v6.2.0')
     pass
 
+def test_system_firmware_upgrade_valid_image(device):
+    # device.system.firmware.upgrade_file('./var/valid.out')
+    pass
+
+def test_system_firmware_upgrade_invalid_image(device):
+    # device.system.firmware.upgrade_file('./var/invalid.out')
+
+    '''
+    Expected response
+    {
+        'http_method': 'POST',
+        'results': {'status': 'error',
+        'error': {'message': 'Firmware image is not valid.', 'code': -593}},
+        'vdom': 'root',
+        'path': 'system',
+        'name': 'firmware',
+        'action': 'upgrade',
+        'status': 'success',
+        'serial': 'FGVULVTM19000XXX',
+        'version': 'v6.2.0',
+        'build': 866
+    }
+    '''
+    pass
+
+
 
 # ApiUser
 def test_system_api_user(device):
@@ -81,3 +107,4 @@ def test_system_api_user(device):
     device.system.api_user.name = 'custom-api-admin'
     device.system.api_user.create(accprofile='prof_admin',
                         ipv4_trusthost='192.0.2.0/24')
+    device.system.api_user.delete()

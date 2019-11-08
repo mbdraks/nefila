@@ -211,7 +211,6 @@ class ApiUser(object):
         return response
 
 
-
 class Firmware(object):
     '''List and upgrade device firmware.
 
@@ -219,6 +218,7 @@ class Firmware(object):
         device.system.firmware.list()
         device.system.firmware.upgrade()
         device.system.firmware.upgrade('v6.2.0')
+        device.system.firmware.upgrade_file('./var/FGT_VM64_KVM-v6-build1510-FORTINET.out')
     '''
 
     def __init__(self, session, timeout, base_url):
@@ -265,12 +265,30 @@ class Firmware(object):
         'name': 'firmware',
         'action': 'upgrade',
         'status': 'success',
-        'serial': 'FGVULVTM19000152',
+        'serial': 'FGVULVTM19000XXX',
         'version': 'v6.2.0',
         'build': 799}
         '''
 
         return response
+
+    def upgrade_file(self, filename=None, timeout=300):
+        '''Upgrade firmware image on this device using an uploaded file
+        Default timeout is longer to allow firmware download from FDN'''
+        url = f'{self.base_url}/monitor/system/firmware/upgrade'
+
+        data = {'source': 'upload', 'scope': 'global'}
+        f = open(filename, 'rb')
+        firmware_file = {'file': (filename, f, 'text/plain')}
+
+        r = self.session.post(
+                            url=url,
+                            data=data,
+                            files=firmware_file,
+                            timeout=timeout
+        )
+
+        return r
 
 
 class DnsDatabase(object):
