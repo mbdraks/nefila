@@ -10,7 +10,6 @@ class FortiGate(object):
         self.session = requests.session()
 
         #: SSL Verification default.
-        self.verify = False
         self.session.verify = False
 
         #: How long to wait for the server to send data before giving up
@@ -28,7 +27,7 @@ class FortiGate(object):
 
         # If credentials are not supplied, check file
         if not (username or token or profile):
-            credentials = get_credentials()
+            credentials = get_credentials(self.hostname)
             username = credentials['username']
             password = credentials['password']
             token = credentials['token']
@@ -40,7 +39,6 @@ class FortiGate(object):
         if not token:
             self.session.post(url=url_login,
                             data=f'username={username}&secretkey={password}',
-                            verify = self.verify,
                             timeout = self.timeout,
             )
 
@@ -118,7 +116,7 @@ class FortiGate(object):
     def license_status(self):
         '''Get current license & registration status.'''
         url = f'{self.base_url}/monitor/license/status'
-        response = self.session.get(url, verify = self.verify, timeout=self.timeout)
+        response = self.session.get(url, timeout=self.timeout)
 
         if response.status_code == 200:
             self.version = response.json()['version']
