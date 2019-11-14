@@ -71,3 +71,11 @@ def test_upload_license(device):
 def test_system_reboot(device):
     # device.system.reboot()
     pass
+
+def test_network_import(device):
+    # device.objects.network.import(filename=networkConfig.zip)
+    pass
+
+def test_network_list(device):
+    # device.objects.network.list()
+    pass
