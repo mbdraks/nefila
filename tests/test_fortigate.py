@@ -49,6 +49,7 @@ def test_device_status(device):
 
 
 # System
+## DNS Database
 def test_dns_database(device):
     device.system.dns_database.list()
     device.system.dns_database.name = 'exampleZone'
@@ -57,6 +58,8 @@ def test_dns_database(device):
     device.system.dns_database.get()
     device.system.dns_database.delete()
 
+
+## Firmware
 def test_system_firmware_list(device):
     r = device.system.firmware.list()
     assert r.status_code == 200
@@ -95,8 +98,16 @@ def test_system_firmware_upgrade_invalid_image(device):
     pass
 
 
+## Interface
+def test_system_interface(device):
+    device.system.interface.list()
+    # device.system.interface.create()
+    # device.system.interface.get()
+    # device.system.interface.get(name='wan1')
+    # device.system.interface.delete()
 
-# ApiUser
+
+## ApiUser
 def test_system_api_user(device):
     device.system.api_user.list()
     device.system.api_user.create()
@@ -108,3 +119,4 @@ def test_system_api_user(device):
     device.system.api_user.create(accprofile='prof_admin',
                         ipv4_trusthost='192.0.2.0/24')
     device.system.api_user.delete()
+

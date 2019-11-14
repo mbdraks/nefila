@@ -135,6 +135,32 @@ class System(object):
         self.dns_database = DnsDatabase(self.session, self.timeout, self.base_url, name=None)
         self.firmware = Firmware(self.session, self.timeout, self.base_url)
         self.api_user = ApiUser(self.session, self.timeout, self.base_url, name='nefila-api-admin')
+        self.interface = Interface(self.session, self.timeout, self.base_url)
+
+
+
+
+class Interface(object):
+    '''List and configure interfaces
+
+    Usage:
+        device.system.interface.list()
+        device.system.interface.create()
+        device.system.interface.get()
+        device.system.interface.get(name='wan1')
+        device.system.interface.delete()
+    '''
+
+    def __init__(self, session, timeout, base_url):
+        self.session = session
+        self.timeout = timeout
+        self.base_url = base_url
+
+    def list(self):
+        '''List all interfaces'''
+        url = f'{self.base_url}/monitor/system/available-interfaces'
+        r = self.session.get(url=url, timeout=self.timeout)
+        return r
 
 
 class ApiUser(object):
