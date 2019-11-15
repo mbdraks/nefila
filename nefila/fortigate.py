@@ -136,9 +136,86 @@ class System(object):
         self.firmware = Firmware(self.session, self.timeout, self.base_url)
         self.api_user = ApiUser(self.session, self.timeout, self.base_url, name='nefila-api-admin')
         self.interface = Interface(self.session, self.timeout, self.base_url)
+        self.config = Config(self.session, self.timeout, self.base_url)
+        self.config_revision = ConfigRevision(self.session, self.timeout, self.base_url)
+
+
+class Config(object):
+    '''Manage system configuration
+
+    Usage:
+        device.system.config.restore(filename='config.cfg')
+        device.system.config.restore(filename='config.cfg')
+        device.system.config.backup(filename='config.cfg')
+        device.system.config.backup(filename='config.cfg', vdom='vd01')
+
+    '''
+
+    def __init__(self, session, timeout, base_url):
+        self.session = session
+        self.timeout = timeout
+        self.base_url = f'{base_url}/monitor/system/config'
+
+    def restore(self, filename=None, config_id=None):
+        '''Restore system configuration from uploaded file'''
+        url = f'{self.base_url}/restore'
+
+        if filename:
+            data = {
+                'source': 'upload',
+                'scope': 'global',
+            }
+
+            f = open(filename, 'rb')
+            files = {'file': (filename, f, 'text/plain')}
+
+            r = self.session.post(
+                                url=url,
+                                data=data,
+                                files=files,
+                                timeout=self.timeout
+            )
+            return r
+
+        elif config_id:
+            data = {
+                'source': 'revision',
+                'config_id': config_id,
+                'scope': 'global',
+            }
+
+            r = self.session.post(
+                                url=url,
+                                json=data,
+                                timeout=self.timeout
+            )
+            return r        
+        
+        else:
+            return None
 
 
 
+class ConfigRevision(object):
+    '''Manage system configuration
+
+    Usage:
+        device.system.config_revision.create()
+        device.system.config_revision.list()
+        
+    '''
+
+    def __init__(self, session, timeout, base_url):
+        self.session = session
+        self.timeout = timeout
+        self.base_url = f'{base_url}/monitor/system/config-revision'
+
+    def list(self):
+        '''Return a list of system configuration revisions'''
+        url = f'{self.base_url}/select'
+
+        r = self.session.get(url=url, timeout=self.timeout)
+        return r
 
 class Interface(object):
     '''List and configure interfaces
@@ -303,12 +380,12 @@ class Firmware(object):
 
         data = {'source': 'upload', 'scope': 'global'}
         f = open(filename, 'rb')
-        firmware_file = {'file': (filename, f, 'text/plain')}
+        files = {'file': (filename, f, 'text/plain')}
 
         r = self.session.post(
                             url=url,
                             data=data,
-                            files=firmware_file,
+                            files=files,
                             timeout=timeout
         )
 

@@ -107,6 +107,12 @@ def test_system_interface(device):
     # device.system.interface.delete()
 
 
+## Config
+# def test_system_config(device):
+#     device.system.config.restore(filename='config.cfg')
+#     device.system.config.backup(filename='config.cfg')
+#     device.system.config.backup(filename='config.cfg', vdom='vd01')
+
 ## ApiUser
 def test_system_api_user(device):
     device.system.api_user.list()
