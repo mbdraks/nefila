@@ -14,7 +14,7 @@ rope = "*"
 pyfmg = "*"
 
 [packages]
-requests = "*"
+requests = {extras = ["security"],version = "*"}
 nefila = {editable = true,path = "."}
 
 [requires]

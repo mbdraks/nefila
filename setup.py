@@ -12,7 +12,7 @@ setup(
     download_url = 'https://github.com/barbosm/nefila/archive/v0.0.3.tar.gz',
     keywords = ['fortinet', 'fortigate', 'security fabric'],
     install_requires=[
-        'requests',
+        'requests', 'requests[security]'
     ],
     classifiers=[
     'Development Status :: 3 - Alpha',
