@@ -21,7 +21,14 @@ pipeline {
         NEFILA_PASSWORD = ''
       }
       steps {
-        sh 'pytest tests/test_fortigate.py -v --junitxml test_fortigate.xml'
+        sh '''pytest --cov-report term-missing --cov=nefila tests/ -k fortigate --junitxml test_fortigate.xml -s
+'''
+      }
+    }
+
+    stage('results') {
+      steps {
+        junit(allowEmptyResults: true, testResults: '*.xml')
       }
     }
 
