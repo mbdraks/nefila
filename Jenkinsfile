@@ -16,9 +16,16 @@ pipeline {
 
     stage('testing') {
       steps {
-        sh 'pytest tests/test_fortigate.py -v'
+        sh 'pytest tests/test_fortigate.py -v --junitxml test_fortigate.xml'
       }
     }
 
   }
+
+  post {
+          always {
+              junit 'test_fortigate.xml'
+          }
+      }
+
 }
