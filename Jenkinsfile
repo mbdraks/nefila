@@ -14,5 +14,11 @@ pipeline {
       }
     }
 
+    stage('testing') {
+      steps {
+        sh 'pytest tests/test_fortigate.py -v'
+      }
+    }
+
   }
 }
