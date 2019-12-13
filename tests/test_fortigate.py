@@ -9,7 +9,6 @@ hostname = os.getenv('FORTIGATE_HOSTNAME', '192.168.0.30')
 username = os.getenv('NEFILA_USERNAME', 'nefila-admin')
 password = os.getenv('NEFILA_PASSWORD', 'nefila-password')
 token = os.getenv('NEFILA_TOKEN', '')
-
 credentials = {'username': username, 'password': password}
 
 @pytest.fixture
@@ -26,11 +25,16 @@ def test_login_live(device):
     print(device.status)
     assert device.hostname == hostname
 
-def test_login_failure():
-    pass
+def test_login_credentials_file():
+    device = nefila.FortiGate(hostname)
+    device.open()
+    assert device.hostname == hostname
 
-def test_login_token():
-    pass
+# def test_login_failure():
+#     pass
+
+# def test_login_token():
+#     pass
 
 def test_device_status(device):
     status = device.status
@@ -69,7 +73,20 @@ def test_system_firmware_upgrade_latest(device):
     pass
 
 def test_system_firmware_upgrade_specific(device):
-    # device.system.firmware.upgrade('v6.2.0')
+    # r = device.system.firmware.upgrade('v6.2.0')
+    # expected_response = {
+    #     'http_method': 'POST',
+    #     'results': {'status': 'success'},
+    #     'vdom': 'root',
+    #     'path': 'system',
+    #     'name': 'firmware',
+    #     'action': 'upgrade',
+    #     'status': 'success',
+    #     'serial': 'FGVULVTM19000XXX',
+    #     'version': 'v6.2.0',
+    #     'build': 799
+    # }
+    # assert r.json() == expected_response
     pass
 
 def test_system_firmware_upgrade_valid_image(device):
@@ -108,10 +125,28 @@ def test_system_interface(device):
 
 
 ## Config
-# def test_system_config(device):
-#     device.system.config.restore(filename='config.cfg')
-#     device.system.config.backup(filename='config.cfg')
-#     device.system.config.backup(filename='config.cfg', vdom='vd01')
+### TODO consolidate slow tests on another file using betamax
+# def test_system_config_restore(device):
+#     filename = './var/test_system_config_01.conf'
+#     r = device.system.config.restore(filename=filename)
+
+#     expected_response = {
+#         'http_method': 'POST',
+#         'results': {'config_restored': True},
+#         'vdom': 'root',
+#         'path': 'system',
+#         'name': 'config',
+#         'action': 'restore',
+#         'status': 'success',
+#         'serial': 'FGVULVTM19000152',
+#         'version': 'v6.2.1',
+#         'build': 932
+#     }
+
+#     assert r.json() == expected_response
+
+#   device.system.config.backup(filename='config.cfg')
+#   device.system.config.backup(filename='config.cfg', vdom='vd01')
 
 ## ApiUser
 def test_system_api_user(device):
@@ -126,3 +161,6 @@ def test_system_api_user(device):
                         ipv4_trusthost='192.0.2.0/24')
     device.system.api_user.delete()
 
+## License 
+# def test_system_license_restore(device):
+#     device.system.license.restore(filename='./var/licenses/license.lic')

@@ -6,9 +6,11 @@ pipeline {
 
   }
   stages {
-    stage('deploy') {
+    stage('build') {
       steps {
-        echo 'new1'
+        sh 'pip install pipenv'
+        sh 'pipenv lock'
+        sh 'pipenv install --dev --system --deploy'
       }
     }
 

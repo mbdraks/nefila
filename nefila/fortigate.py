@@ -137,7 +137,41 @@ class System(object):
         self.api_user = ApiUser(self.session, self.timeout, self.base_url, name='nefila-api-admin')
         self.interface = Interface(self.session, self.timeout, self.base_url)
         self.config = Config(self.session, self.timeout, self.base_url)
+        self.license = License(self.session, self.timeout, self.base_url)
         self.config_revision = ConfigRevision(self.session, self.timeout, self.base_url)
+
+
+class License(object):
+    '''Manage VM License upload
+
+    Usage:
+        device.system.license.restore(filename='license.lic')
+    '''
+
+    def __init__(self, session, timeout, base_url):
+        self.session = session
+        self.timeout = timeout
+        self.base_url = f'{base_url}/monitor/system/vmlicense'
+
+    def restore(self, filename=None):
+        '''Update VM license using uploaded file'''
+        url = f'{self.base_url}/upload'
+
+        data = {
+            'source': 'upload',
+            'scope': 'global',
+        }
+
+        f = open(filename, 'rb')
+        files = {'file': (filename, f, 'text/plain')}
+
+        r = self.session.post(
+                            url=url,
+                            data=data,
+                            files=files,
+                            timeout=self.timeout
+        )
+        return r
 
 
 class Config(object):
@@ -355,23 +389,9 @@ class Firmware(object):
             version_id = firmware_list[0]['id']
 
         data = {'source': 'fortiguard', 'filename': version_id}
-        response = self.session.post(url=url, json=data, timeout=timeout)
+        r = self.session.post(url=url, json=data, timeout=timeout)
 
-        # Should return this if success
-        '''
-        {'http_method': 'POST',
-        'results': {'status': 'success'},
-        'vdom': 'root',
-        'path': 'system',
-        'name': 'firmware',
-        'action': 'upgrade',
-        'status': 'success',
-        'serial': 'FGVULVTM19000XXX',
-        'version': 'v6.2.0',
-        'build': 799}
-        '''
-
-        return response
+        return r
 
     def upgrade_file(self, filename=None, timeout=300):
         '''Upgrade firmware image on this device using an uploaded file
