@@ -18,7 +18,7 @@ pipeline {
       environment {
         FORTIGATE_HOSTNAME = '10.20.10.15'
         NEFILA_USERNAME = 'admin'
-        NEFILA_PASSWORD = 'fortinet'
+        NEFILA_PASSWORD = ''
       }
       steps {
         sh 'pytest tests/test_fortigate.py -v --junitxml test_fortigate.xml'
