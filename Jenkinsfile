@@ -1,16 +1,14 @@
 pipeline {
   agent {
     docker {
-      image 'python:3.7.2'
+      image 'ee6cfd6608af'
     }
 
   }
   stages {
     stage('build') {
       steps {
-        sh 'pip install pipenv'
-        sh 'pipenv lock'
-        sh 'pipenv install --dev --system --deploy'
+        echo 'go!'
       }
     }
 
@@ -18,7 +16,7 @@ pipeline {
       environment {
         FORTIGATE_HOSTNAME = '10.20.10.15'
         NEFILA_USERNAME = 'admin'
-        NEFILA_PASSWORD = ''
+        NEFILA_PASSWORD = 'fortinet'
       }
       steps {
         sh 'env'
