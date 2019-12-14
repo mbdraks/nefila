@@ -19,10 +19,7 @@ pipeline {
         NEFILA_PASSWORD = 'fortinet'
       }
       steps {
-        sh 'env'
-        sh 'pwd'
-        sh 'ls'
-        sh 'pytest   ./tests/test_fortigate.py::test_login_live -s -v --junitxml test_fortigate.xml '
+        sh 'pytest --cov-report term-missing --cov=nefila tests/ -k fortigate --junitxml test_fortigate.xml --junit_family=xunit2 --capture=no --verbose'
       }
     }
 
