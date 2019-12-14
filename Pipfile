@@ -12,6 +12,7 @@ betamax = "*"
 betamax-serializers = "*"
 rope = "*"
 pyfmg = "*"
+pytest-cov = "*"
 
 [packages]
 requests = {extras = ["security"],version = "*"}

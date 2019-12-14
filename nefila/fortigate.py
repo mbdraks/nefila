@@ -304,33 +304,38 @@ class ApiUser(object):
         response = self.session.get(url=url, timeout=self.timeout)
         return response
 
-    def create(self, accprofile='super_admin', ipv4_trusthost='192.168.0.0/16'):
+    def create(self, accprofile='super_admin', ipv4_trusthosts=['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16'], vdom='root'):
         '''Create a new API user and generate an access key'''
         url = f'{self.base_url}/cmdb/system/api-user'
         name = self.name
         token = None
 
+        trusthosts = []
+        for host in ipv4_trusthosts:
+            d = {
+                'id':0,
+                'type':'ipv4-trusthost',
+                'ipv4-trusthost': host,
+            }
+            trusthosts.append(d)
+
         data = {
             'name': name,
             'accprofile': accprofile,
-            'trusthost':[{
-                'id':0,
-                'type':'ipv4-trusthost',
-                'ipv4-trusthost': ipv4_trusthost,
-                }
-            ]
+            'trusthost': trusthosts,
+            'vdom': [{'name': vdom}],
         }
 
-        response = self.session.post(url=url, json=data)
+        r = self.session.post(url=url, json=data)
 
-        if response.status_code == 200:
+        if r.status_code == 200:
             data = {'api-user': self.name}
             url = f'{self.base_url}/monitor/system/api-user/generate-key'
-            response = self.session.post(url=url, json=data)
-            token = response.json()['results']['access_token']
+            r = self.session.post(url=url, json=data)
+            token = r.json()['results']['access_token']
             self.token = token
 
-        return response
+        return r
 
     def get(self):
         '''Get details of a specific API user'''

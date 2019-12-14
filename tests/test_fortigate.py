@@ -155,10 +155,9 @@ def test_system_api_user(device):
     device.system.api_user.token
     device.system.api_user.get()
     device.system.api_user.delete()
-
     device.system.api_user.name = 'custom-api-admin'
     device.system.api_user.create(accprofile='prof_admin',
-                        ipv4_trusthost='192.0.2.0/24')
+                        ipv4_trusthosts=['192.0.2.0/24'])
     device.system.api_user.delete()
 
 ## License 
