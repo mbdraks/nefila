@@ -21,7 +21,10 @@ pipeline {
         NEFILA_PASSWORD = ''
       }
       steps {
-        sh 'pytest  --junitxml test_fortigate.xml --capture=no -k fortigate'
+        sh 'env'
+        sh 'pwd'
+        sh 'ls'
+        sh 'pytest   ./tests/test_fortigate.py::test_login_live -s -v --junitxml test_fortigate.xml '
       }
     }
 
