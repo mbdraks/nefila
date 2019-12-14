@@ -9,6 +9,7 @@ pipeline {
     stage('build') {
       steps {
         echo 'go!'
+        sh 'pipenv install --dev --system --deploy'
       }
     }
 
