@@ -20,7 +20,7 @@ pipeline {
         NEFILA_PASSWORD = 'fortinet'
       }
       steps {
-        sh 'pytest --cov-report term-missing --cov=nefila tests/ -k fortigate --junitxml test_fortigate.xml --capture=no --verbose'
+        sh 'pytest --cov-report term-missing --cov=nefila tests/ -k fortigate --junitxml test_fortigate.xml --verbose'
       }
     }
 
