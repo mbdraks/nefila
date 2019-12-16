@@ -27,7 +27,8 @@ def test_login_live(device):
 
 def test_login_credentials_file():
     device = nefila.FortiGate(hostname)
-    device.open()
+    r = device.open()
+    r.json()
     assert device.hostname == hostname
 
 # def test_login_failure():
@@ -40,14 +41,15 @@ def test_device_status(device):
     status = device.status
 
     expected_status = {
-        'version': 'v6.2.0',
-        'serial': 'FG81EP4Q17002XXX',
-        'forticare': 'registered',
-        'hostname': 'example_hostaname',
-        'model': 'FortiGate-81E-POE',
-        'uptime': 1000,
+        'version': '',
+        'serial': '',
+        'forticare': '',
+        'hostname': '',
+        'model': '',
+        'uptime': 0,
     }
-
+    
+    print(status)
     # check if keys exist
     assert status.keys() == expected_status.keys()
 
