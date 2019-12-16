@@ -28,7 +28,7 @@ def test_login_live(device):
 def test_login_credentials_file():
     device = nefila.FortiGate(hostname)
     r = device.open()
-    r.json()
+    print(r)
     assert device.hostname == hostname
 
 # def test_login_failure():
@@ -48,7 +48,7 @@ def test_device_status(device):
         'model': '',
         'uptime': 0,
     }
-    
+
     print(status)
     # check if keys exist
     assert status.keys() == expected_status.keys()
