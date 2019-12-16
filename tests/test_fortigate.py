@@ -28,6 +28,7 @@ def test_login_live(device):
 
 def test_login_credentials_file():
     device = nefila.FortiGate(hostname)
+    nefila.utils.set_credentials(**credentials)
     r = device.open()
     print(r)
     assert r.status_code == 200
