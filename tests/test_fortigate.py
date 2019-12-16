@@ -24,11 +24,12 @@ def device():
 def test_login_live(device):
     r = device.status
     print(r)
+    print(device.hostname)
     assert device.hostname == hostname
 
 def test_login_credentials_file():
     device = nefila.FortiGate(hostname)
-    nefila.utils.set_credentials(**credentials)
+    nefila.utils.set_credentials(profile=hostname, **credentials)
     r = device.open()
     print(r)
     assert r.status_code == 200
