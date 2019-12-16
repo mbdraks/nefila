@@ -40,26 +40,17 @@ class FortiGate(object):
             self.session.post(url=url_login,
                             data=f'username={username}&secretkey={password}',
                             timeout = self.timeout,
-            )
-
-            for cookie in self.session.cookies:
-                if cookie.name == 'ccsrftoken':
-                    csrftoken = cookie.value[1:-1]
-                    self.session.headers.update({'X-CSRFTOKEN': csrftoken})
+            )            
+            csrftoken = self.session.cookies['ccsrftoken']
+            self.session.headers.update({'X-CSRFTOKEN': csrftoken})
 
         else:
             self.session.headers.update({'Authorization': f'Bearer {token}'})
             self.token = True
         
-        response = self.license_status()
-        
-        # self.serial = response.json()['serial']
-        
-        # version = response.json()['version']
-        # build = str(response.json()['build'])
-        # self.version = f'{version},build{build}'
-
-        return response
+        # Call to license status during login to auto set device details
+        r = self.license_status()
+        return r
 
 
     def close(self):

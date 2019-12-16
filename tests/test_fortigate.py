@@ -22,14 +22,15 @@ def device():
 
 # Login
 def test_login_live(device):
-    print(device.status)
+    r = device.status
+    print(r)
     assert device.hostname == hostname
 
 def test_login_credentials_file():
     device = nefila.FortiGate(hostname)
     r = device.open()
     print(r)
-    assert device.hostname == hostname
+    assert r.status_code == 200
 
 # def test_login_failure():
 #     pass
@@ -38,7 +39,7 @@ def test_login_credentials_file():
 #     pass
 
 def test_device_status(device):
-    status = device.status
+    r = device.status
 
     expected_status = {
         'version': '',
@@ -49,9 +50,9 @@ def test_device_status(device):
         'uptime': 0,
     }
 
-    print(status)
+    print(r)
     # check if keys exist
-    assert status.keys() == expected_status.keys()
+    assert r.keys() == expected_status.keys()
 
 
 # System
