@@ -1,6 +1,7 @@
 
 import pytest
 import os
+from pprint import pprint
 
 import nefila
 import nefila.utils
@@ -28,8 +29,8 @@ def test_login_live(device):
     assert device.hostname == hostname
 
 def test_login_credentials_file():
+    nefila.utils.set_credentials(hostname, **credentials)
     device = nefila.FortiGate(hostname)
-    nefila.utils.set_credentials(profile=hostname, **credentials)
     r = device.open()
     print(r)
     assert r.status_code == 200
@@ -42,7 +43,6 @@ def test_login_credentials_file():
 
 def test_device_status(device):
     r = device.status
-
     expected_status = {
         'version': '',
         'serial': '',
@@ -51,9 +51,6 @@ def test_device_status(device):
         'model': '',
         'uptime': 0,
     }
-
-    print(r)
-    # check if keys exist
     assert r.keys() == expected_status.keys()
 
 
@@ -73,11 +70,11 @@ def test_system_firmware_list(device):
     r = device.system.firmware.list()
     assert r.status_code == 200
 
-def test_system_firmware_upgrade_latest(device):
+# def test_system_firmware_upgrade_latest(device):
     # device.system.firmware.upgrade()
-    pass
+    # pass
 
-def test_system_firmware_upgrade_specific(device):
+# def test_system_firmware_upgrade_specific(device):
     # r = device.system.firmware.upgrade('v6.2.0')
     # expected_response = {
     #     'http_method': 'POST',
@@ -92,37 +89,37 @@ def test_system_firmware_upgrade_specific(device):
     #     'build': 799
     # }
     # assert r.json() == expected_response
-    pass
+    # pass
 
-def test_system_firmware_upgrade_valid_image(device):
+# def test_system_firmware_upgrade_valid_image(device):
     # device.system.firmware.upgrade_file('./var/valid.out')
-    pass
+    # pass
 
-def test_system_firmware_upgrade_invalid_image(device):
+# def test_system_firmware_upgrade_invalid_image(device):
     # device.system.firmware.upgrade_file('./var/invalid.out')
 
-    '''
-    Expected response
-    {
-        'http_method': 'POST',
-        'results': {'status': 'error',
-        'error': {'message': 'Firmware image is not valid.', 'code': -593}},
-        'vdom': 'root',
-        'path': 'system',
-        'name': 'firmware',
-        'action': 'upgrade',
-        'status': 'success',
-        'serial': 'FGVULVTM19000XXX',
-        'version': 'v6.2.0',
-        'build': 866
-    }
-    '''
-    pass
+    # '''
+    # Expected response
+    # {
+    #     'http_method': 'POST',
+    #     'results': {'status': 'error',
+    #     'error': {'message': 'Firmware image is not valid.', 'code': -593}},
+    #     'vdom': 'root',
+    #     'path': 'system',
+    #     'name': 'firmware',
+    #     'action': 'upgrade',
+    #     'status': 'success',
+    #     'serial': 'FGVULVTM19000XXX',
+    #     'version': 'v6.2.0',
+    #     'build': 866
+    # }
+    # '''
+    # pass
 
 
 ## Interface
 def test_system_interface(device):
-    device.system.interface.list()
+    pprint(device.system.interface.list().json())
     # device.system.interface.create()
     # device.system.interface.get()
     # device.system.interface.get(name='wan1')
@@ -165,6 +162,6 @@ def test_system_api_user(device):
                         ipv4_trusthosts=['192.0.2.0/24'])
     device.system.api_user.delete()
 
-## License 
+## License - VM only
 # def test_system_license_restore(device):
 #     device.system.license.restore(filename='./var/licenses/license.lic')

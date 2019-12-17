@@ -18,9 +18,10 @@ class FortiGate(object):
         #: Device hostname
         self.hostname = hostname
         self.base_url = f'https://{self.hostname}/api/v2'
+        self.vdom = 'root'
 
         # Subsystems init
-        self.system = System(self.session, self.timeout, self.base_url)
+        self.system = System(self.session, self.timeout, self.base_url, device=self)
 
 
     def open(self, username=None, password=None, token=None, profile=None):
@@ -40,8 +41,9 @@ class FortiGate(object):
             self.session.post(url=url_login,
                             data=f'username={username}&secretkey={password}',
                             timeout = self.timeout,
-            )            
+            )
             csrftoken = self.session.cookies['ccsrftoken']
+            csrftoken = csrftoken[1:-1]
             self.session.headers.update({'X-CSRFTOKEN': csrftoken})
 
         else:
@@ -118,12 +120,13 @@ class FortiGate(object):
 
 
 class System(object):
-    def __init__(self, session, timeout, base_url):
+    def __init__(self, session, timeout, base_url, device):
         self.session = session
         self.timeout = timeout
         self.base_url = base_url
+        self.device = device
 
-        self.dns_database = DnsDatabase(self.session, self.timeout, self.base_url, name=None)
+        self.dns_database = DnsDatabase(self.session, self.timeout, self.base_url, name=None, device=device)
         self.firmware = Firmware(self.session, self.timeout, self.base_url)
         self.api_user = ApiUser(self.session, self.timeout, self.base_url, name='nefila-api-admin')
         self.interface = Interface(self.session, self.timeout, self.base_url)
@@ -420,26 +423,29 @@ class DnsDatabase(object):
         device.system.dns_database.delete()
     '''
 
-    def __init__(self, session, timeout, base_url, name):
+    def __init__(self, session, timeout, base_url, name, device):
         self.session = session
         self.timeout = timeout
         self.base_url = base_url
         self.name = name
-
+        self.device = device
 
     def list(self):
         '''List all DNS zones'''
         url = f'{self.base_url}/cmdb/system/dns-database'
-        response = self.session.get(url=url, timeout=self.timeout)
-        return response
+        params = {'vdom': self.device.vdom}
+        r = self.session.get(url=url, timeout=self.timeout, params=params)
+        return r
 
 
     def create(self):
         '''Create a new DNS Zone'''
         url = f'{self.base_url}/cmdb/system/dns-database'
         data = {'name': self.name, 'domain': self.name}
-        response = self.session.post(url=url, json=data)
-        return response
+        params = {'vdom': self.device.vdom}
+
+        r = self.session.post(url=url, json=data, params=params)
+        return r
 
     def add(self, ip, hostname):
         '''Add a new entry on a specific existing DNS Zone, preserving 
