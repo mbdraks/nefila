@@ -14,24 +14,37 @@ DEFAULT_TOKEN = ''
 DEFAULT_HOSTNAME = '192.168.1.99'
 
 def set_credentials(profile=profile,
-                    filename=creds_filename, 
-                    username=DEFAULT_USERNAME, 
-                    password=DEFAULT_PASSWORD, 
-                    token=DEFAULT_TOKEN):
+                    filename=creds_filename,
+                    username=DEFAULT_USERNAME,
+                    password=DEFAULT_PASSWORD,
+                    token=None):
     '''Create credential file, will overwrite if file already exist'''
     config = configparser.ConfigParser()
-    config[profile] = {
-        'username': username,
-        'password': password,
-        'token': token
-    }
 
-    os.makedirs(nefila_dir, exist_ok=True)
+    # Check if file/profile already exist
+    if os.path.exists(filename):
+        config.read(filename)
 
-    with open(filename, 'a') as configfile:
-        config.write(configfile)
-    return 'Credentials file set'
+    if not profile in config:
+        # Token or Password based
+        if token:
+            config[profile] = {
+                'username': username,
+                'token': token,
+            }
+        else:
+            config[profile] = {
+                'username': username,
+                'password': password,
+            }
 
+        os.makedirs(nefila_dir, exist_ok=True)
+
+        with open(filename, 'w') as configfile:
+            config.write(configfile)
+        return 'Credentials file set'
+    else:
+        return 'Profile already exist'
 
 def get_credentials(profile=profile, filename=creds_filename):
     '''Obtain credentials from file'''

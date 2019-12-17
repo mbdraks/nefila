@@ -24,8 +24,8 @@ class FortiManagerAnalyzerCore(object):
         self.session_id = None
 
         # Subsystems init
-        self.devices = Devices(self.session, self.timeout, self.base_url, self.session_id)
-
+        # self.devices = Devices(self.session, self.timeout, self.base_url, self.session_id)
+        self.devices = Devices(self)
 
     def open(self, username=None, password=None):
         credentials = {}
@@ -166,10 +166,19 @@ class FortiManagerAnalyzerCore(object):
         response = self.session.post(url=self.base_url, json=data, timeout = self.timeout)
         return response
 
-        
+
 class Devices(object):
-    def __init__(self, session, timeout, base_url, session_id):
-        self.session = session
-        self.timeout = timeout
-        self.base_url = base_url
-        self.session_id = session_id
+    def __init__(self, core):
+        self.fmg = core
+
+    def list(self, adom='root'):
+        '''List managed devices
+        
+        mgmt_mode
+            2 Unauthorized
+        
+        '''
+        url = f'dvmdb/device'
+        json = self.fmg.prepare_json(url=url)
+        r = self.fmg.session.post(url=self.fmg.base_url, json=json, timeout = self.fmg.timeout)
+        return r

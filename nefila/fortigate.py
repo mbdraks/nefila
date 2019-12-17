@@ -18,9 +18,10 @@ class FortiGate(object):
         #: Device hostname
         self.hostname = hostname
         self.base_url = f'https://{self.hostname}/api/v2'
+        self.vdom = 'root'
 
         # Subsystems init
-        self.system = System(self.session, self.timeout, self.base_url)
+        self.system = System(self.session, self.timeout, self.base_url, device=self)
 
 
     def open(self, username=None, password=None, token=None, profile=None):
@@ -41,25 +42,17 @@ class FortiGate(object):
                             data=f'username={username}&secretkey={password}',
                             timeout = self.timeout,
             )
-
-            for cookie in self.session.cookies:
-                if cookie.name == 'ccsrftoken':
-                    csrftoken = cookie.value[1:-1]
-                    self.session.headers.update({'X-CSRFTOKEN': csrftoken})
+            csrftoken = self.session.cookies['ccsrftoken']
+            csrftoken = csrftoken[1:-1]
+            self.session.headers.update({'X-CSRFTOKEN': csrftoken})
 
         else:
             self.session.headers.update({'Authorization': f'Bearer {token}'})
             self.token = True
         
-        response = self.license_status()
-        
-        # self.serial = response.json()['serial']
-        
-        # version = response.json()['version']
-        # build = str(response.json()['build'])
-        # self.version = f'{version},build{build}'
-
-        return response
+        # Call to license status during login to auto set device details
+        r = self.license_status()
+        return r
 
 
     def close(self):
@@ -127,17 +120,52 @@ class FortiGate(object):
 
 
 class System(object):
-    def __init__(self, session, timeout, base_url):
+    def __init__(self, session, timeout, base_url, device):
         self.session = session
         self.timeout = timeout
         self.base_url = base_url
+        self.device = device
 
-        self.dns_database = DnsDatabase(self.session, self.timeout, self.base_url, name=None)
+        self.dns_database = DnsDatabase(self.session, self.timeout, self.base_url, name=None, device=device)
         self.firmware = Firmware(self.session, self.timeout, self.base_url)
         self.api_user = ApiUser(self.session, self.timeout, self.base_url, name='nefila-api-admin')
         self.interface = Interface(self.session, self.timeout, self.base_url)
         self.config = Config(self.session, self.timeout, self.base_url)
+        self.license = License(self.session, self.timeout, self.base_url)
         self.config_revision = ConfigRevision(self.session, self.timeout, self.base_url)
+
+
+class License(object):
+    '''Manage VM License upload
+
+    Usage:
+        device.system.license.restore(filename='license.lic')
+    '''
+
+    def __init__(self, session, timeout, base_url):
+        self.session = session
+        self.timeout = timeout
+        self.base_url = f'{base_url}/monitor/system/vmlicense'
+
+    def restore(self, filename=None):
+        '''Update VM license using uploaded file'''
+        url = f'{self.base_url}/upload'
+
+        data = {
+            'source': 'upload',
+            'scope': 'global',
+        }
+
+        f = open(filename, 'rb')
+        files = {'file': (filename, f, 'text/plain')}
+
+        r = self.session.post(
+                            url=url,
+                            data=data,
+                            files=files,
+                            timeout=self.timeout
+        )
+        return r
 
 
 class Config(object):
@@ -270,33 +298,38 @@ class ApiUser(object):
         response = self.session.get(url=url, timeout=self.timeout)
         return response
 
-    def create(self, accprofile='super_admin', ipv4_trusthost='192.168.0.0/16'):
+    def create(self, accprofile='super_admin', ipv4_trusthosts=['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16'], vdom='root'):
         '''Create a new API user and generate an access key'''
         url = f'{self.base_url}/cmdb/system/api-user'
         name = self.name
         token = None
 
+        trusthosts = []
+        for host in ipv4_trusthosts:
+            d = {
+                'id':0,
+                'type':'ipv4-trusthost',
+                'ipv4-trusthost': host,
+            }
+            trusthosts.append(d)
+
         data = {
             'name': name,
             'accprofile': accprofile,
-            'trusthost':[{
-                'id':0,
-                'type':'ipv4-trusthost',
-                'ipv4-trusthost': ipv4_trusthost,
-                }
-            ]
+            'trusthost': trusthosts,
+            'vdom': [{'name': vdom}],
         }
 
-        response = self.session.post(url=url, json=data)
+        r = self.session.post(url=url, json=data)
 
-        if response.status_code == 200:
+        if r.status_code == 200:
             data = {'api-user': self.name}
             url = f'{self.base_url}/monitor/system/api-user/generate-key'
-            response = self.session.post(url=url, json=data)
-            token = response.json()['results']['access_token']
+            r = self.session.post(url=url, json=data)
+            token = r.json()['results']['access_token']
             self.token = token
 
-        return response
+        return r
 
     def get(self):
         '''Get details of a specific API user'''
@@ -355,23 +388,9 @@ class Firmware(object):
             version_id = firmware_list[0]['id']
 
         data = {'source': 'fortiguard', 'filename': version_id}
-        response = self.session.post(url=url, json=data, timeout=timeout)
+        r = self.session.post(url=url, json=data, timeout=timeout)
 
-        # Should return this if success
-        '''
-        {'http_method': 'POST',
-        'results': {'status': 'success'},
-        'vdom': 'root',
-        'path': 'system',
-        'name': 'firmware',
-        'action': 'upgrade',
-        'status': 'success',
-        'serial': 'FGVULVTM19000XXX',
-        'version': 'v6.2.0',
-        'build': 799}
-        '''
-
-        return response
+        return r
 
     def upgrade_file(self, filename=None, timeout=300):
         '''Upgrade firmware image on this device using an uploaded file
@@ -404,26 +423,29 @@ class DnsDatabase(object):
         device.system.dns_database.delete()
     '''
 
-    def __init__(self, session, timeout, base_url, name):
+    def __init__(self, session, timeout, base_url, name, device):
         self.session = session
         self.timeout = timeout
         self.base_url = base_url
         self.name = name
-
+        self.device = device
 
     def list(self):
         '''List all DNS zones'''
         url = f'{self.base_url}/cmdb/system/dns-database'
-        response = self.session.get(url=url, timeout=self.timeout)
-        return response
+        params = {'vdom': self.device.vdom}
+        r = self.session.get(url=url, timeout=self.timeout, params=params)
+        return r
 
 
     def create(self):
         '''Create a new DNS Zone'''
         url = f'{self.base_url}/cmdb/system/dns-database'
         data = {'name': self.name, 'domain': self.name}
-        response = self.session.post(url=url, json=data)
-        return response
+        params = {'vdom': self.device.vdom}
+
+        r = self.session.post(url=url, json=data, params=params)
+        return r
 
     def add(self, ip, hostname):
         '''Add a new entry on a specific existing DNS Zone, preserving 
