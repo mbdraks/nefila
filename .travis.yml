@@ -3,24 +3,23 @@ language: python
 python:
   - 3.6
 
-# services:
-#   - docker
+services:
+  - docker
 
+before_install:
+  - python --version
+  - pip install -U pip
+  - pip install -U pytest
+  - pip install codecov
 
-# before_install:
-#   - python --version
-#   - pip install -U pip
-#   - pip install -U pytest
-#   - pip install codecov
+install:
+  - pip install .
 
-# install:
-#   - pip install .
-
-# script: 
-#   - docker-compose build
-#   - docker-compose up -d
-#   - docker-compose ps
-#   - pytest tests/fortitester/test_fortitester.py -v -s --cov-report term --cov-report html:htmlcov --cov=nefila
+script: 
+  - docker-compose build
+  - docker-compose up -d
+  - docker-compose ps
+  - pytest tests/fortitester/test_fortitester.py -v -s --cov-report term --cov-report html:htmlcov --cov=nefila
 
 # notifications:
 
