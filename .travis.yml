@@ -11,8 +11,10 @@ before_install:
   - pip install -U pip
   - pip install -U pytest
   - pip install codecov
+  - pip list
 
 install:
+  - pip install -r requirements.txt
   - pip install .
 
 script: 
