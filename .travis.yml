@@ -7,6 +7,9 @@ services:
   - docker
 
 before_install:
+  - docker-compose -f tests/fortitester/docker-compose.yml up -d
+  - docker-compose -f tests/fortitester/docker-compose.yml ps
+  
   - python --version
   - pip install -U pip
   - pip install -U pytest
@@ -20,9 +23,9 @@ install:
 script: 
   # - docker-compose build 
   # - docker-compose up -d
-  - docker-compose -f tests/fortitester/docker-compose.yml up -d
+  # - docker-compose -f tests/fortitester/docker-compose.yml up -d
   # - docker-compose ps
-  - docker-compose -f tests/fortitester/docker-compose.yml ps
+  # - docker-compose -f tests/fortitester/docker-compose.yml ps
   # - pytest tests/fortitester/test_fortitester.py -v -s --cov-report term --cov-report html:htmlcov --cov=nefila
   - pytest tests/fortitester/test_fortitester.py --verbose --capture=no
 
