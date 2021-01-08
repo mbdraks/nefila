@@ -1,0 +1,272 @@
+[{
+        "httpRequest": {
+            "method": "POST",
+            "path": "/api/user/login"
+        },
+        "httpResponse": {
+            "statusCode": 200,
+            "reasonPhrase": "OK",
+            "headers": {
+                "Set-Cookie": [
+                    "sid=\"!gzQiwyDmIgc4lWw2vUIQaA==?gASVOAAAAAAAAACMA3NpZJSMBHV1aWSUjARVVUlElJOUKYGUfZSMA2ludJSKEF65V+ryO7WBNUY4dXruizhzYoaULg==\"; HttpOnly; Path=/; SameSite=Strict; Secure"
+                ]
+            },
+            "cookies": {
+                "sid": "!gzQiwyDmIgc4lWw2vUIQaA==?gASVOAAAAAAAAACMA3NpZJSMBHV1aWSUjARVVUlElJOUKYGUfZSMA2ludJSKEF65V+ryO7WBNUY4dXruizhzYoaULg=="
+            },
+            "body": {
+                "ErrorCode": 0,
+                "Data": {
+                    "_id": "5f491e1338107d0294def18d",
+                    "name": "admin",
+                    "role": "admin",
+                    "type": "local"
+                }
+            }
+        }
+    },
+    {
+        "httpRequest": {
+            "method": "GET",
+            "path": "/api/user/logout",
+            "cookies": {
+                "sid": "gzQiwyDmIgc4lWw2vUIQaA==?gASVOAAAAAAAAACMA3NpZJSMBHV1aWSUjARVVUlElJOUKYGUfZSMA2ludJSKEF65V+ryO7WBNUY4dXruizhzYoaULg=="
+            }
+        },
+        "httpResponse": {
+            "statusCode": 200,
+            "reasonPhrase": "OK",
+            "headers": {
+                "Set-Cookie": [
+                    "sid=\"!gzQiwyDmIgc4lWw2vUIQaA==?gASVOAAAAAAAAACMA3NpZJSMBHV1aWSUjARVVUlElJOUKYGUfZSMA2ludJSKEF65V+ryO7WBNUY4dXruizhzYoaULg==\"; expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=-1; Path=/"
+                ]
+            },
+            "body": {
+                "ErrorCode": 0
+            }
+        }
+    },
+    {
+        "httpRequest": {
+            "method": "GET",
+            "path": "/api/system/status",
+            "headers": {
+                "Cookie": [
+                    "sid=\"!gzQiwyDmIgc4lWw2vUIQaA==?gASVOAAAAAAAAACMA3NpZJSMBHV1aWSUjARVVUlElJOUKYGUfZSMA2ludJSKEF65V+ryO7WBNUY4dXruizhzYoaULg==\""
+                ]
+            },
+            "cookies": {
+                "sid": "!gzQiwyDmIgc4lWw2vUIQaA==?gASVOAAAAAAAAACMA3NpZJSMBHV1aWSUjARVVUlElJOUKYGUfZSMA2ludJSKEF65V+ryO7WBNUY4dXruizhzYoaULg=="
+            }
+        },
+        "httpResponse": {
+            "body": {
+                "ErrorCode": 0,
+                "Data": {
+                    "hostname": "5R4-FTS-2000D-2",
+                    "time": "2020-09-01 20:18:33",
+                    "uptime": "2 hours, 38 minutes",
+                    "logdisk": "Available",
+                    "diskInfo": {
+                        "Total": 205.26,
+                        "Used": 1.48
+                    },
+                    "sslAccelerator": -1,
+                    "dpdkReloadingState": "yes",
+                    "cpuUsage": 0.0,
+                    "memUsage": 2.76539,
+                    "opdbStatus": "Stopped",
+                    "nicMultiQueue": "enable",
+                    "globalAddressSpace": "enable",
+                    "idleTimeout": 60,
+                    "serverCertificate": "default"
+                }
+            }
+        }
+    },
+    {
+        "httpRequest": {
+            "method": "GET",
+            "path": "/api/system/status"
+        },
+        "httpResponse": {
+            "statusCode": 401,
+            "reasonPhrase": "Unauthorized",
+            "body": {
+                "ErrorCode": -1,
+                "ErrorMessage": "401 Unauthorized"
+            }
+        }
+    },
+    {
+        "httpRequest": {
+            "method": "GET",
+            "path": "/api/user"
+        },
+        "httpResponse": {
+            "statusCode": 200,
+            "reasonPhrase": "OK",
+            "body": {
+                "payload": [{
+                    "_id": "5f491e1338107d0294def18d",
+                    "name": "admin",
+                    "password": "$2a$12$tDYCc8m44JdyYeUw4pFU2.Ln6p6CPAss9//m5XkOF3d.oA.CvRIIO",
+                    "group": "",
+                    "role": "admin",
+                    "profile": "",
+                    "isDefaultPwd": false,
+                    "type": "local"
+                }],
+                "total": 1
+            }
+        }
+    },
+    {
+        "httpRequest": {
+            "method": "POST",
+            "path": "/api/user"
+        },
+        "httpResponse": {
+            "statusCode": 200,
+            "reasonPhrase": "OK",
+            "body": {
+                "ErrorCode": 0,
+                "Data": "5f4fa3ca38107d0adf4dafef"
+            }
+        }
+    },
+    {
+        "httpRequest": {
+            "method": "POST",
+            "path": "/api/user/delete"
+        },
+        "httpResponse": {
+            "statusCode": 200,
+            "reasonPhrase": "OK",
+            "body": {
+                "ErrorCode": 0,
+                "Data": ""
+            }
+        }
+    },
+    {
+        "httpRequest": {
+            "method": "GET",
+            "path": "/api/objectConfig/network"
+        },
+        "httpResponse": {
+            "statusCode": 200,
+            "reasonPhrase": "OK",
+            "body": {
+                "payload": [{
+                        "_id": "5f4eae4338107d0ae13eba7a",
+                        "Name": "NN-SSL_VPN",
+                        "DUTRole": "Gateway",
+                        "TestMode": "NAT",
+                        "Ref": 0
+                    },
+                    {
+                        "_id": "5f4daa5c38107d0f0b3923ac",
+                        "Name": "nn_mb",
+                        "DUTRole": "Gateway",
+                        "TestMode": "NAT",
+                        "Ref": 1
+                    },
+                    {
+                        "_id": "5f4eb02438107d0ae13eba80",
+                        "Name": "nn_v4_gw_nat_sslvpn",
+                        "DUTRole": "Gateway",
+                        "TestMode": "NAT",
+                        "Ref": 7
+                    }
+                ],
+                "total": 3
+            }
+        }
+    },
+    {
+        "httpRequest": {
+            "method": "POST",
+            "path": "/api/objectConfig/network"
+        },
+        "httpResponse": {
+            "statusCode": 200,
+            "reasonPhrase": "OK",
+            "body": {
+                "ErrorCode": 0,
+                "Data": "5f4fa3cc38107d0adf4db000"
+            }
+        }
+    },
+    {
+        "httpRequest": {
+            "method": "POST",
+            "path": "/api/objectConfig/network/delete"
+        },
+        "httpResponse": {
+            "statusCode": 200,
+            "reasonPhrase": "OK",
+            "body": {
+                "ErrorCode": 0
+            }
+        }
+    },
+    {
+        "httpRequest": {
+            "method": "POST",
+            "path": "/api/objectConfig/network/find"
+        },
+        "httpResponse": {
+            "statusCode": 200,
+            "reasonPhrase": "OK",
+            "body": {
+                "ErrorCode": 0,
+                "Data": [{
+                    "_id": "5f4eae4338107d0ae13eba7a",
+                    "Name": "NN-SSL_VPN",
+                    "TestMode": "NAT",
+                    "IPVersion": "v4",
+                    "DUTRole": "Gateway",
+                    "UseVpn": true,
+                    "UseIpsec": false,
+                    "UseWebCrawler": false,
+                    "ClientConfig": {
+                        "SlaveHost": [{
+                            "Host": "localhost",
+                            "Ports": [{
+                                "Subnets": [{
+                                    "IpAddrRange": "12.0.0.1-12.0.0.254",
+                                    "Netmask": "8",
+                                    "Route": {
+                                        "Gateway": "12.255.255.254",
+                                        "PeerNetwork": "172.17.81.0/24",
+                                        "VpnGateway": "12.255.255.254"
+                                    }
+                                }],
+                                "Interface": "port2"
+                            }]
+                        }]
+                    },
+                    "ServerConfig": {
+                        "SlaveHost": [{
+                            "Host": "localhost",
+                            "Ports": [{
+                                "Subnets": [{
+                                    "IpAddrRange": "172.17.81.1-172.17.81.253",
+                                    "Netmask": "24",
+                                    "Route": {
+                                        "Gateway": "172.17.81.254",
+                                        "PeerNetwork": "12.0.0.0/8"
+                                    }
+                                }],
+                                "Interface": "port1"
+                            }]
+                        }]
+                    },
+                    "WorkMode": "Standalone",
+                    "User": "admin"
+                }]
+            }
+        }
+    }
+]

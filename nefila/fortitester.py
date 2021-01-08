@@ -1,190 +1,221 @@
 import requests
-from .utils import get_credentials
+import json
+import os
+from .modelmeta import DataModelProxy
+
+import logging
+import daiquiri
+import sys
+from collections import OrderedDict
+
+# logging
+
+# loglevel = os.getenv("FORTITESTER_LOGLEVEL", "DEBUG")
+# logfile = "/dev/null"
+logfile = "logfile.json"
+
+daiquiri.setup(
+    outputs=(
+        daiquiri.output.Stream(sys.stdout),
+        daiquiri.output.File(logfile, formatter=daiquiri.formatter.JSON_FORMATTER),
+    ),
+)
+
+log = daiquiri.getLogger(__name__)
+log.setLevel(os.environ.get("LOGLEVEL", "INFO"))
 
 
 class FortiTester(object):
-    def __init__(self, hostname):
-        #: Use the same session for all requests
+    def __init__(self, host):
+        self.host = host
+        self.base_url = f"https://{self.host}/api"
+        self.username = None
         self.session = requests.session()
-
-        #: SSL Verification default.
         self.session.verify = False
-
-        #: How long to wait for the server to send data before giving up
         self.timeout = 10
-
-        #: Device hostname
-        self.hostname = hostname
-
-        #: Base URL for all requests
-        self.base_url = f'https://{self.hostname}/api'
-        
-        # Subsystems init
-        self.user = User(self.session, self.timeout, self.base_url)
-        self.system = System(self.session, self.timeout, self.base_url)
-
+        # Endpoints
+        self.system = DataModelProxy(wrapper=self, name="system")
+        self.user = DataModelProxy(wrapper=self, name="user")
+        self.objectConfig = DataModelProxy(wrapper=self, name="objectConfig")
 
     def open(self, username=None, password=None):
-        credentials = {}
-        
-        # If credentials are not supplied, check file
-        if not (username):
-            credentials = get_credentials(self.hostname)
-            username = credentials['username']
-            password = credentials['password']
+        """
+        Login
+        :param username (string): Username
+        :param password (string): Password
 
-        url = f'{self.base_url}/user/login'
+        This function will load credentials from env vars if available:
+            - NEFILA_USERNAME
+            - NEFILA_PASSWORD
+        """
+        if username is None:
+            username = os.getenv("NEFILA_USERNAME", "admin")
+            password = os.getenv("NEFILA_PASSWORD", "")
 
-        data = {
-            'name': username,
-            'password': password
-        }
+        self.username = username
 
-        r = self.session.post(url=url, json=data, timeout=self.timeout)
-        return r
-
+        credentials = {"name": username, "password": password}
+        path = "/user/login"
+        return self._post(path, **credentials)
 
     def close(self):
-        url = f'{self.base_url}/user/logout'
-
-        r = self.session.get(url=url, timeout=self.timeout)
-        return r
-
-
-    def _get_status(self):
-        '''Obtain general status
-        '''
-        status = {}
-        url = f'{self.base_url}/system/status'
-        r = self.session.get(url=url, timeout=self.timeout)
-        status['hostname'] = r.json()['Data']['hostname']
-        status['uptime'] = r.json()['Data']['uptime']
-
-        url = f'{self.base_url}/system/info'
-        r = self.session.get(url=url, timeout=self.timeout)
-        status['forticare'] = r.json()['Data']['License']['Status']
-        status['version'] = r.json()['Data']['Version']
-        status['model'] = r.json()['Data']['Platform']
-        status['serial'] = r.json()['Data']['SN']
-        
-        return status
+        # url = f"{self.base_url}/user/logout"
+        path = "/user/logout"
+        return self._get(path)
+        # r = self.session.get(url=url, timeout=self.timeout)
+        # return r
 
     @property
     def status(self):
-        return self._get_status()
+        return self.system.status.get()
 
+    def _get(self, path, *args, **kwargs):
+        url = f"{ self.base_url }{ path }"
 
-    def basic_status(self):
-        '''Retrieve basic system status.'''
-        url = f'{self.base_url}/system/status'
+        for key, value in kwargs.items():
+            url = url + "&%s=%s" % (key, value)
+
         r = self.session.get(url=url, timeout=self.timeout)
+
+        func_name = sys._getframe().f_code.co_name
+        self.gen_log(r, func_name)
+
+        self.raw = r
+
+        r = self.try_json_response(r)
         return r
 
+    def _post(self, path, *args, **kwargs):
+        url = f"{ self.base_url }{ path }"
+        if args is not None:
+            for arg in args:
+                kwargs = arg
 
-class User(object):
-    def __init__(self, session, timeout, base_url):
-        self.session = session
-        self.timeout = timeout
-        self.base_url = base_url
-        self.username = None
+        r = self.session.post(url=url, json=kwargs)
 
-    def list(self):
-        '''List users
-        
-        Usage:
-            device.user.list()
-        '''
+        func_name = sys._getframe().f_code.co_name
+        self.gen_log(r, func_name)
 
-        url = f'{self.base_url}/user'
-        r = self.session.get(url=url, timeout=self.timeout)
+        self.raw = r
+
+        r = self.try_json_response(r)
         return r
 
-    def info(self):
-        '''Obtain info from specific user
-        
-        Usage:
-            device.user.username = 'admin'
-            device.user.info()
-        '''
+    def _put(self, path, value, *args, **kwargs):
+        url = f"{ self.base_url }{ path }"
 
-        # Obtain UserId from name
-        # Obtain all users
-        userList = self.list().json()['payload']
+        if args is not None:
+            for arg in args:
+                print(arg)
+                kwargs = arg
 
-        for user in userList:
-            if user['name'] == self.username:
-                self.userId = user['_id']
-
-        # Once UserId is set, obtain info
-        url = f'{self.base_url}/user/{self.userId}'
-        r = self.session.get(url=url, timeout=self.timeout)
+        r = self.session.put(url=url, json=kwargs)
         return r
 
-    def modify_password(self, oldpassword, newpassword):
-        '''Modify user password
-        
-        Usage:
-            device.user.username = 'admin'
-            device.user.modify_password(oldpassword='oldpwd', newpassword='newpwd')
-        '''
+    # user
+    @staticmethod
+    def _user_operations_create(self, *args, **kwargs):
+        """
+        Create user
+        :param name (string): User name
+        :param password (string): Password
+        :param role (string): Role of the user
+        """
+        path = "/user"
+        return self._wrapper._post(path, *args, **kwargs)
 
-        # Obtain UserId from name
+    @staticmethod
+    def _user_operations_delete(self, *args, **kwargs):
+        """
+        Delete user
+        :param ids (array): List of User IDs
+        """
+        path = "/user/delete"
+        return self._wrapper._post(path, **kwargs)
 
-        # Obtain all users
-        userList = self.list().json()['payload']
+    # network
+    @staticmethod
+    def _objectConfig_network_operations_create(self, *args, **kwargs):
+        """
+        Create Network
+        :param config (string): The json of network config
+        """
+        path = "/objectConfig/network"
+        return self._wrapper._post(path, *args, **kwargs)
 
-        for user in userList:
-            if user['name'] == self.username:
-                self.userId = user['_id']
+    @staticmethod
+    def _objectConfig_network_operations_delete(self, *args, **kwargs):
+        """
+        Delete Network
+        :param ids (array): Network configuration IDs
+        """
+        path = "/objectConfig/network/delete"
+        return self._wrapper._post(path, *args, **kwargs)
 
-        # Once UserId is set, change pwd
+    @staticmethod
+    def _objectConfig_network_operations_find(self, *args, **kwargs):
+        """
+        Get Network By IDs
+        :param ids (array): IDs of network configuration
+        """
+        path = "/objectConfig/network/find"
+        return self._wrapper._post(path, *args, **kwargs)
 
-        url = f'{self.base_url}/user/{self.userId}/modifyPassword'
+    # utils
+    def gen_log(self, r, func_name, level="INFO"):
+        # breakpoint()
+        resp_body = self.try_json_response(r)
 
-        data = {
-            'oldPsw': oldpassword,
-            'newPsw': newpassword,
-            'cfmNewPsw': newpassword,
-            '_id': self.userId,
+        if type(r.request.body) == bytes:
+            req_body = r.request.body.decode("utf-8")
+            req_body = json.loads(req_body)
+        else:
+            req_body = r.request.body
+
+        # message = OrderedDict()
+        message = {
+            "httpRequest": {
+                "method": r.request.method,
+                "path": r.request.path_url,
+                "headers": dict(r.request.headers),
+                "body": req_body,
+            },
+            "httpResponse": {
+                "statusCode": r.status_code,
+                "reasonPhrase": r.reason,
+                "headers": dict(r.headers),
+                "cookies": dict(r.cookies.items()),
+                "body": resp_body,
+            },
         }
 
-        r = self.session.put(url=url, json=data, timeout=self.timeout)
-        return r
+        module_name = f"{ __name__ }.{ func_name }"
 
+        debug_paths = ["/api/user/login", "/api/user/logout"]
+        error_codes = [401]
 
-class System(object):
-    def __init__(self, session, timeout, base_url):
-        self.session = session
-        self.timeout = timeout
-        self.base_url = base_url
+        if r.request.path_url in debug_paths:
+            level = "DEBUG"
 
-    def reboot(self):
-        '''Reboot system
-        
-        Usage:
-            device.system.reboot()
-        '''
+        if r.status_code in error_codes:
+            level = "ERROR"
 
-        url = f'{self.base_url}/system/reboot'
-        r = self.session.post(url=url, timeout=self.timeout)
-        return r
+        if level == "CRITICAL":
+            log.critical(module_name, **message)
+        elif level == "ERROR":
+            log.error(module_name, **message)
+        elif level == "WARNING":
+            log.warning(module_name, **message)
+        elif level == "INFO":
+            log.info(module_name, **message)
+        else:
+            log.debug(module_name, **message)
 
-    # def license_upload(self, filename=None, timeout=300):
-    #     '''Upload license'''
-    #     url = f'{self.base_url}/system/upload/license'
-
-    #     data = {'source': 'upload', 'scope': 'global'}
-    #     f = open(filename, 'rb')
-    #     firmware_file = {'file': (filename, f, 'text/plain')}
-
-    #     r = self.session.post(
-    #                         url=url,
-    #                         data=data,
-    #                         files=firmware_file,
-    #                         timeout=timeout
-    #     )
-
-    #     return r
-
-    # Request URL: https://hostname/api/system/upload/license
-    # Request URL: https://hostname/api/system/licenseUploadStatus?t=1573603039259
+    def try_json_response(self, r):
+        if r.content is not None:
+            try:
+                return r.json()
+            except json.decoder.JSONDecodeError as e:
+                return r.text
+        else:
+            return r

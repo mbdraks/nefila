@@ -1,0 +1,14 @@
+version: "2.4"
+services:
+  mockServer:
+    image: mockserver/mockserver
+    ports:
+      - 1080:1080
+    environment:
+        MOCKSERVER_LOG_LEVEL: DEBUG
+        MOCKSERVER_WATCH_INITIALIZATION_JSON: "true"
+        MOCKSERVER_INITIALIZATION_JSON_PATH: /config/fortitester.json
+    volumes:
+      - type: bind
+        source: .
+        target: /config

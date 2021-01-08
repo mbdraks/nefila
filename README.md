@@ -1,5 +1,8 @@
 # nefila
 
+<p align=center><img src="img/nefila.png" width="40%">
+
+<p align=center>
 Nefila is an elegant and simple Fortinet Security Fabric library for Python.
 
 ---
@@ -16,7 +19,7 @@ Python 3.7.4 (default, Sep  7 2019, 18:27:02)
 
 ## Features
 
-- File-based authentication
+- Environment variables based authentication
 - Standard methods across all supported devices
 
 
@@ -25,7 +28,7 @@ Python 3.7.4 (default, Sep  7 2019, 18:27:02)
 - FortiOS v6.2
 - FortiAnalyzer v6.2
 - FortiManager v6.2
-- FortiTester v3.7
+- FortiTester v4.0
 - FortiSwitch v6.0
 
 
@@ -43,24 +46,32 @@ automatically using the following methods:
 
 1. Setup your device credentials at ~/.nefila/credentials in the 
 following format:
-```
+```INI
     [DEFAULT]
     username = <your username>
     password = <your password>
 ```
 
 - You can also have device specific credentials:
-```
+```INI
     [192.0.2.1]
     username = <your username>
     password = <your password>
 ```
 
 2. Alternatively you can also use an access token:
-```
+```INI
     [DEFAULT]
     token = <your access token>
 ```
+
+3. Environment Variables
+```bash
+    export NEFILA_HOSTNAME=10.10.10.10
+    export NEFILA_USERNAME=admin
+    export NEFILA_PASSWORD=password
+```
+
 
 
 ## License

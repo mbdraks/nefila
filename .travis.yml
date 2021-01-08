@@ -1,0 +1,26 @@
+language: python
+python:
+- 3.6
+services:
+- docker
+before_install:
+- docker-compose -f tests/fortitester/docker-compose.yml up -d
+- docker-compose -f tests/fortitester/docker-compose.yml ps
+- python --version
+- pip install -U pip
+- pip install -U pytest
+- pip install codecov
+- pip list
+install:
+- pip install -r requirements.txt
+- pip install .
+script:
+- pytest tests/fortitester/test_fortitester.py --verbose --capture=no
+deploy:
+  provider: pypi
+  username: __token__
+  password:
+    secure: F+bQrmY6JtGG1he5wgZNAb0L+L9C88F5so7jjpXb8Zrju97jK5wp9C46myyw4QPWuDF4lUkYH++uwfEi5/grbvcXSkeMxADIbJc+B5p880feeloLdn5jlGz4T97vEVen7DXINyEhFs0DPkFoMeOU+4i7/hVMtcIyd0fiX9c/T8R5xWl/1O2pB8U3blNnHE00U5ZLzb1yVhSG6IQaAmgiE6FtnLef2qrvCVpXDgeajoRyez1vrG3V5ejfnJKFiSbhuuSLTjoQZB2O5jpAlf1a3ACL3sWSUrwWoWOVHmsCgcJP2EqcCWx0o7Y+BqXw3bC0IGn535rtbOV4zJ3yrk+4pTh2q/tIoyH6h3CI9bJ7walR7OySaV7ltu1HiEPez1T25NHLg37oaK1qDj/Dl83Dq4V2zamQIWrr8v8xDVZo1/CCN36d5quzhGl1ijBTifhb6NDJwiPbk0iHjuku71TdvuA2U5zY1TE7xOa3CothQ8f8dba6FsQLtBs8YrRPZoBefGFKFoz+d6Kg7aNmU2a3LT7XNDlqDpv4qT8V49FgPl91YNn0cB79JWhl4cmIvgVv2NyJjyqHiQfCF4rkvcVnlOHRAG8Nyc/3yOKuwuSKeCd0bCDNbLCz3Rz+xmIlG1cZ8JdufKEyW50aEQ/TT2AHJWYS328AdoDwSBqXoWX3hUY=
+  on:
+    branch: refactor_fortitester
+    tags: true

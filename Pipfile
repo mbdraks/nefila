@@ -13,10 +13,13 @@ betamax-serializers = "*"
 rope = "*"
 pyfmg = "*"
 pytest-cov = "*"
+tox = "*"
+black = "*"
 
 [packages]
 requests = {extras = ["security"],version = "*"}
 nefila = {editable = true,path = "."}
+daiquiri = "*"
 
 [requires]
 python_version = "3.7"
