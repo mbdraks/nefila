@@ -20,6 +20,7 @@ black = "*"
 requests = {extras = ["security"],version = "*"}
 nefila = {editable = true,path = "."}
 daiquiri = "*"
+cryptography = ">=3.2"
 
 [requires]
 python_version = "3.7"
