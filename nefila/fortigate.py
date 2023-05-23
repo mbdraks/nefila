@@ -42,9 +42,10 @@ class FortiGate(object):
                             data=f'username={username}&secretkey={password}',
                             timeout = self.timeout,
             )
-            csrftoken = self.session.cookies['ccsrftoken']
-            csrftoken = csrftoken[1:-1]
-            self.session.headers.update({'X-CSRFTOKEN': csrftoken})
+            for cookie in self.session.cookies:
+                if "ccsrftoken" in cookie.name:
+                    csrftoken = cookie.value[1:-1]
+                    self.session.headers.update({'X-CSRFTOKEN': csrftoken})       
 
         else:
             self.session.headers.update({'Authorization': f'Bearer {token}'})
