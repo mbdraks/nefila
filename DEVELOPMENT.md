@@ -57,7 +57,18 @@ Specific test
     git tag -a v0.0.5 -m 'updated csrf code to support 7.4'
     git push --tags
 
+- Create release on github
+
 - Create package and push to PyPI
 
     python setup.py sdist
     twine upload dist/*
+
+- Test and check version
+
+    python3 -m venv .venv
+    source .venv/bin/activate
+    python3 -m pip install --upgrade pip
+    pip install wheel
+    pip install nefila
+    pip list

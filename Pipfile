@@ -15,6 +15,7 @@ pyfmg = "*"
 pytest-cov = "*"
 tox = "*"
 black = "*"
+twine = "*"
 
 [packages]
 requests = {extras = ["security"],version = "*"}
