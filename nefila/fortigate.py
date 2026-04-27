@@ -4,6 +4,7 @@ import json
 import time
 import datetime
 
+
 class FortiGate(object):
     def __init__(self, hostname):
         #: Use the same session for all requests
@@ -19,13 +20,12 @@ class FortiGate(object):
         self.hostname = hostname
         self.base_url = f'https://{self.hostname}/api/v2'
         self.vdom = 'root'
+        self.token = False
 
         # Subsystems init
         self.system = System(self.session, self.timeout, self.base_url, device=self)
 
-
     def open(self, username=None, password=None, token=None, profile=None):
-
         # If credentials are not supplied, check file
         if not (username or token or profile):
             credentials = get_credentials(self.hostname)
@@ -35,70 +35,256 @@ class FortiGate(object):
 
         # Update parameters
         self.username = username
-        url_login = f'https://{self.hostname}/logincheck'
 
-        if not token:
-            self.session.post(url=url_login,
-                            data=f'username={username}&secretkey={password}',
-                            timeout = self.timeout,
-            )
-            for cookie in self.session.cookies:
-                if "ccsrftoken" in cookie.name:
-                    csrftoken = cookie.value[1:-1]
-                    self.session.headers.update({'X-CSRFTOKEN': csrftoken})       
-
-        else:
+        if token:
             self.session.headers.update({'Authorization': f'Bearer {token}'})
             self.token = True
-        
+        else:
+            authenticated = self._api_authentication_login(username, password)
+
+            if not authenticated:
+                self._logincheck_login(username, password)
+
         # Call to license status during login to auto set device details
         r = self.license_status()
         return r
 
+    def _api_authentication_login(self, username, password):
+        """
+        Authenticate using FortiOS API-based username/password flow.
+
+        This supports newer FortiOS versions where POST /api/v2/authentication
+        may return the session in two different formats:
+
+        1. JSON-based session:
+           {
+               "session_key": "..."
+           }
+
+           In this case, use:
+           Authorization: Bearer <session_key>
+
+        2. Cookie-based session:
+           session_key_443_xxx=...
+           ccsrf_token_443_xxx=...
+
+           In this case, use:
+           Cookie: session_key_...=...; ccsrf_token_...=...
+           x-csrftoken: <ccsrf_token value>
+
+        Returns True when authentication appears successful.
+        Returns False when the endpoint is unavailable or login failed, so callers
+        can fall back to the legacy /logincheck flow.
+        """
+        url = f'{self.base_url}/authentication'
+
+        payload = {
+            'username': username,
+            'secretkey': str(password),
+            'password': str(password),
+            'ack_post_disclaimer': True,
+            'ack_pre_disclaimer': True,
+            'request_key': True,
+        }
+
+        response = self.session.post(
+            url=url,
+            json=payload,
+            timeout=self.timeout,
+        )
+
+        if response.status_code != 200:
+            return False
+
+        try:
+            data = response.json()
+        except ValueError:
+            return False
+
+        if data.get('status_message') != 'LOGIN_SUCCESS':
+            return False
+
+        json_session_key = data.get('session_key')
+
+        if json_session_key:
+            self.session.headers.update({'Authorization': f'Bearer {json_session_key}'})
+            return True
+
+        cookie_header = []
+        csrf_token = None
+        has_session_cookie = False
+
+        for cookie in self.session.cookies:
+            cookie_name = cookie.name.lower()
+
+            if cookie_name.startswith('session_key'):
+                has_session_cookie = True
+                cookie_header.append(f'{cookie.name}={cookie.value}')
+
+            elif (
+                cookie_name.startswith('ccsrf_token')
+                or cookie_name.startswith('ccsrftoken')
+                or cookie_name.startswith('ccsrf')
+            ):
+                csrf_token = cookie.value.strip('"')
+                cookie_header.append(f'{cookie.name}={cookie.value}')
+
+            elif cookie_name.startswith('cmgmt_override'):
+                cookie_header.append(f'{cookie.name}={cookie.value}')
+
+            elif cookie_name.startswith('apscookie'):
+                cookie_header.append(f'{cookie.name}={cookie.value}')
+
+        if has_session_cookie:
+            self.session.headers.update({'Cookie': '; '.join(cookie_header)})
+
+            if csrf_token:
+                self.session.headers.update({'x-csrftoken': csrf_token})
+
+            return True
+
+        return False
+
+    def _logincheck_login(self, username, password):
+        """
+        Legacy FortiOS GUI/session login used by older nefila versions.
+
+        This preserves backward compatibility with the original login flow.
+        If the original payload does not create a session, it also tries the
+        ajax=1 format used by newer FortiOS clients.
+        """
+        url_login = f'https://{self.hostname}/logincheck'
+
+        response = self.session.post(
+            url=url_login,
+            data=f'username={username}&secretkey={password}',
+            timeout=self.timeout,
+        )
+
+        self._apply_csrf_from_cookies()
+
+        if self._has_session_cookie():
+            return response
+
+        response = self.session.post(
+            url=url_login,
+            data={
+                'username': username,
+                'secretkey': password,
+                'ajax': '1',
+            },
+            timeout=self.timeout,
+        )
+
+        self._apply_csrf_from_cookies()
+        return response
+
+    def _has_session_cookie(self):
+        """
+        Return True if the current session has a FortiOS session cookie.
+        """
+        for cookie in self.session.cookies:
+            cookie_name = cookie.name.lower()
+
+            if (
+                cookie_name.startswith('session_key')
+                or cookie_name.startswith('apscookie')
+            ):
+                return True
+
+        return False
+
+    def _apply_csrf_from_cookies(self):
+        """
+        Apply FortiOS CSRF token from cookies to the session headers.
+
+        Older FortiOS versions may use ccsrftoken.
+        Newer FortiOS versions may use ccsrf_token_<port>_<hash>.
+        """
+        cookie_header = []
+        csrf_token = None
+
+        for cookie in self.session.cookies:
+            cookie_name = cookie.name.lower()
+
+            if (
+                cookie_name.startswith('session_key')
+                or cookie_name.startswith('apscookie')
+                or cookie_name.startswith('cmgmt_override')
+                or cookie_name.startswith('ccsrf_token')
+                or cookie_name.startswith('ccsrftoken')
+                or cookie_name.startswith('ccsrf')
+            ):
+                cookie_header.append(f'{cookie.name}={cookie.value}')
+
+            if 'ccsrftoken' in cookie_name:
+                csrf_token = cookie.value.strip('"')
+
+            elif (
+                cookie_name.startswith('ccsrf_token')
+                or cookie_name.startswith('ccsrf')
+            ):
+                csrf_token = cookie.value.strip('"')
+
+        if cookie_header:
+            self.session.headers.update({'Cookie': '; '.join(cookie_header)})
+
+        if csrf_token:
+            self.session.headers.update({'X-CSRFTOKEN': csrf_token})
+            self.session.headers.update({'x-csrftoken': csrf_token})
 
     def close(self):
         url_logout = f'https://{self.hostname}/logout'
         response = self.session.post(url_logout, timeout=self.timeout)
         return response.status_code
 
-
     def _get_status(self):
         '''Obtain general status
-        
+
         Uptime in seconds
 
         '''
+        status = {}
+
         url = f'{self.base_url}/monitor/license/status'
         response = self.session.get(url, timeout=self.timeout)
+
         if response.status_code == 200:
-            status = {}
-            status['version'] = response.json()['version']
-            status['serial'] = response.json()['serial']
-            status['forticare'] = response.json()['results']['forticare']['status']
+            data = response.json()
+            status['version'] = data.get('version')
+            status['serial'] = data.get('serial')
+            status['forticare'] = data.get('results', {}).get('forticare', {}).get('status')
 
         url = f'{self.base_url}/monitor/web-ui/state'
         response = self.session.get(url, timeout=self.timeout)
+
         if response.status_code == 200:
-            model_name = response.json()['results']['model_name']
-            model_number = response.json()['results']['model_number']
+            data = response.json()
+            results = data.get('results', {})
 
-            ticks = response.json()['results']['utc_last_reboot'] 
-            ticks_to_seconds = ticks/1000
-            uptime = time.time() - ticks_to_seconds
-            uptime = datetime.timedelta(seconds=uptime)
+            model_name = results.get('model_name')
+            model_number = results.get('model_number')
 
-            status['hostname'] = response.json()['results']['hostname']
+            ticks = results.get('utc_last_reboot')
+
+            if ticks is not None:
+                ticks_to_seconds = ticks / 1000
+                uptime = time.time() - ticks_to_seconds
+                uptime = datetime.timedelta(seconds=uptime)
+                status['uptime'] = uptime.seconds
+            else:
+                status['uptime'] = None
+
+            status['hostname'] = results.get('hostname')
             status['model'] = f'{model_name}-{model_number}'
-            status['uptime'] = uptime.seconds
 
             return status
-        else:
-            return response.status_code
+
+        return response.status_code
 
     @property
     def status(self):
         return self._get_status()
-
 
     def basic_status(self):
         '''Retrieve basic system status.'''
@@ -106,16 +292,16 @@ class FortiGate(object):
         response = self.session.get(url, timeout=self.timeout)
         return response
 
-
     def license_status(self):
         '''Get current license & registration status.'''
         url = f'{self.base_url}/monitor/license/status'
         response = self.session.get(url, timeout=self.timeout)
 
         if response.status_code == 200:
-            self.version = response.json()['version']
-            self.serial = response.json()['serial']
-            self.forticare = response.json()['results']['forticare']['status']
+            data = response.json()
+            self.version = data.get('version')
+            self.serial = data.get('serial')
+            self.forticare = data.get('results', {}).get('forticare', {}).get('status')
 
         return response
 
@@ -161,10 +347,10 @@ class License(object):
         files = {'file': (filename, f, 'text/plain')}
 
         r = self.session.post(
-                            url=url,
-                            data=data,
-                            files=files,
-                            timeout=self.timeout
+            url=url,
+            data=data,
+            files=files,
+            timeout=self.timeout
         )
         return r
 
@@ -199,10 +385,10 @@ class Config(object):
             files = {'file': (filename, f, 'text/plain')}
 
             r = self.session.post(
-                                url=url,
-                                data=data,
-                                files=files,
-                                timeout=self.timeout
+                url=url,
+                data=data,
+                files=files,
+                timeout=self.timeout
             )
             return r
 
@@ -214,15 +400,14 @@ class Config(object):
             }
 
             r = self.session.post(
-                                url=url,
-                                json=data,
-                                timeout=self.timeout
+                url=url,
+                json=data,
+                timeout=self.timeout
             )
-            return r        
-        
+            return r
+
         else:
             return None
-
 
 
 class ConfigRevision(object):
@@ -231,7 +416,7 @@ class ConfigRevision(object):
     Usage:
         device.system.config_revision.create()
         device.system.config_revision.list()
-        
+
     '''
 
     def __init__(self, session, timeout, base_url):
@@ -245,6 +430,7 @@ class ConfigRevision(object):
 
         r = self.session.get(url=url, timeout=self.timeout)
         return r
+
 
 class Interface(object):
     '''List and configure interfaces
@@ -272,7 +458,7 @@ class Interface(object):
 class ApiUser(object):
     '''List and configure API users.
 
-    Default API user is nefila-api-admin using super_admin profile and 
+    Default API user is nefila-api-admin using super_admin profile and
     trusted hosts 192.168.0.0/16.
 
     Usage:
@@ -308,8 +494,8 @@ class ApiUser(object):
         trusthosts = []
         for host in ipv4_trusthosts:
             d = {
-                'id':0,
-                'type':'ipv4-trusthost',
+                'id': 0,
+                'type': 'ipv4-trusthost',
                 'ipv4-trusthost': host,
             }
             trusthosts.append(d)
@@ -338,7 +524,6 @@ class ApiUser(object):
         response = self.session.get(url=url, timeout=self.timeout)
         return response
 
-
     def delete(self):
         '''Delete API user'''
         url = f'{self.base_url}/cmdb/system/api-user/{self.name}'
@@ -362,7 +547,7 @@ class Firmware(object):
         self.base_url = base_url
 
     def list(self):
-        '''Retrieve a list of firmware images available to use for 
+        '''Retrieve a list of firmware images available to use for
         upgrade on this device from FortiGuard'''
         url = f'{self.base_url}/monitor/system/firmware'
         response = self.session.get(url=url, timeout=self.timeout)
@@ -372,7 +557,6 @@ class Firmware(object):
         '''Upgrade firmware image on this device
         Default timeout is longer to allow firmware download from FDN'''
         url = f'{self.base_url}/monitor/system/firmware/upgrade'
-        
 
         firmware_list = self.list().json()['results']['available']
 
@@ -403,10 +587,10 @@ class Firmware(object):
         files = {'file': (filename, f, 'text/plain')}
 
         r = self.session.post(
-                            url=url,
-                            data=data,
-                            files=files,
-                            timeout=timeout
+            url=url,
+            data=data,
+            files=files,
+            timeout=timeout
         )
 
         return r
@@ -438,7 +622,6 @@ class DnsDatabase(object):
         r = self.session.get(url=url, timeout=self.timeout, params=params)
         return r
 
-
     def create(self):
         '''Create a new DNS Zone'''
         url = f'{self.base_url}/cmdb/system/dns-database'
@@ -449,7 +632,7 @@ class DnsDatabase(object):
         return r
 
     def add(self, ip, hostname):
-        '''Add a new entry on a specific existing DNS Zone, preserving 
+        '''Add a new entry on a specific existing DNS Zone, preserving
         existing entries.
         '''
         # Obtain existing list
@@ -457,30 +640,28 @@ class DnsDatabase(object):
         response = self.session.get(url=url, timeout=self.timeout)
         dns_entry_list = response.json()['results'][0]['dns-entry']
 
-        # prepare the new entry
+        # Prepare the new entry
         dns_entry_id = len(dns_entry_list) + 1
         dns_entry = {
-                'id': dns_entry_id,
-                'ip': ip,
-                'hostname': hostname,
+            'id': dns_entry_id,
+            'ip': ip,
+            'hostname': hostname,
         }
 
-        # prepare new dns table
+        # Prepare new DNS table
         dns_entry_list.append(dns_entry)
         dns_entry = {'dns-entry': dns_entry_list}
 
-        # update zone
+        # Update zone
         response = self.session.put(url, json=dns_entry)
-        
-        return response
 
+        return response
 
     def get(self):
         '''Get all entries of a specific DNS Zone'''
         url = f'{self.base_url}/cmdb/system/dns-database/{self.name}'
         response = self.session.get(url=url, timeout=self.timeout)
         return response
-
 
     def delete(self):
         '''Delete DNS Zone'''
